@@ -50,7 +50,14 @@ a:hover{text-decoration:underline}
 .masuk-kiri::before{content:"";position:absolute;right:40px;top:-120px;width:280px;height:280px;
   border-radius:50%;background:rgba(255,255,255,.04)}
 .masuk-merek{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
-.masuk-merek img{height:42px;background:#fff;border-radius:8px;padding:4px}
+.masuk-merek img{height:42px;max-width:200px;object-fit:contain}
+/* Penyesuaian logo terhadap latar gelap.
+   logo-putih  : logo gelap dijadikan siluet putih polos supaya terbaca
+   logo-alas   : logo diberi alas putih (cara paling aman bila warna
+                 logo tidak bisa diperiksa, mis. server gambarnya
+                 tidak mengizinkan pembacaan warna) */
+.logo-putih{filter:brightness(0) invert(1)}
+.logo-alas{background:#fff;border-radius:8px;padding:4px}
 .masuk-merek .kotak{width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.14);
   display:grid;place-items:center;font-weight:800;font-size:15px;letter-spacing:.5px}
 .masuk-kiri h1{font-size:30px;line-height:1.25;margin:0 0 14px;font-weight:700;position:relative;z-index:1}
@@ -78,7 +85,7 @@ a:hover{text-decoration:underline}
 .sisi{background:var(--tinta);color:#cbd5e1;display:flex;flex-direction:column;
   position:fixed;inset:0 auto 0 0;width:var(--sisi);z-index:30}
 .sisi-merek{display:flex;align-items:center;gap:11px;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
-.sisi-merek img{height:34px;background:#fff;border-radius:7px;padding:3px}
+.sisi-merek img{height:34px;max-width:132px;object-fit:contain}
 .sisi-merek .kotak{width:34px;height:34px;border-radius:8px;flex:none;
   background:linear-gradient(135deg,#14b8a6,#0f766e);display:grid;place-items:center;
   color:#fff;font-weight:800;font-size:12px;letter-spacing:.4px}
@@ -115,6 +122,18 @@ a:hover{text-decoration:underline}
 .atas .judul span{display:block;font-size:11.5px;color:var(--abu);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
 .atas .aksi{display:flex;gap:8px;align-items:center}
+/* Tombol segarkan: selalu terlihat, termasuk saat aplikasi dipasang di layar
+   utama HP di mana tombol muat ulang bawaan browser tidak ada. */
+.atas .tbl-segar{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  width:auto;height:36px;padding:0 13px;flex:none;font:inherit;font-size:12.5px;font-weight:600;
+  background:var(--abu-t);color:var(--tinta);border:1px solid var(--garis);border-radius:8px;cursor:pointer}
+.atas .tbl-segar:hover{background:var(--abu-m)}
+.atas .tbl-segar.berputar svg{animation:putar .7s linear infinite}
+@keyframes putar{to{transform:rotate(360deg)}}
+@media(max-width:1023px){
+  .atas .tbl-segar{width:36px;padding:0}
+  .atas .tbl-segar .segar-tx{display:none}
+}
 .kanvas{padding:20px 22px 34px;flex:1;min-width:0;overflow-x:hidden}
 .lebar{max-width:1480px;margin:0 auto;min-width:0}
 
@@ -426,6 +445,10 @@ tbody tr:hover td{background:#fbfdfe}
         <span id="subHal">-</span>
       </div>
       <div class="aksi" id="aksiAtas"></div>
+      <button class="tbl-segar" id="tblSegar" onclick="segarkan()" title="Muat ulang data halaman ini">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        <span class="segar-tx">Segarkan</span>
+      </button>
     </header>
 
     <div class="kanvas">
@@ -513,6 +536,7 @@ function panggil(fungsi, args, lanjut, teksSibuk){
     .withFailureHandler(function(e){
       sibuk(false);
       var pesan = (e && e.message) ? e.message : String(e);
+      if(/sesi sudah berakhir/i.test(pesan)){ sesiHabis(); return; }
       var jaringan = /failed to fetch|networkerror|load failed|menjawab kode|timed out/i.test(pesan);
       if(jaringan || navigator.onLine === false){
         alert('Tidak bisa terhubung ke server.\n\n' +
@@ -524,6 +548,119 @@ function panggil(fungsi, args, lanjut, teksSibuk){
         alert(pesan);
       }
     })[fungsi].apply(null, args);
+}
+
+/* ================= LOGO =================
+   Logo dipasang di dua tempat yang sama-sama berlatar GELAP: panel kiri
+   layar masuk dan kepala menu samping. Kalau logonya sendiri berwarna
+   gelap, ia akan tenggelam di latar itu - maka warnanya disesuaikan
+   sesuai pilihan di sheet PENGATURAN. */
+var logoTerpasang = '';
+
+function pasangLogo(url, gaya){
+  if(!url || url === logoTerpasang) return;
+  var uji = new Image();
+  uji.onload = function(){
+    logoTerpasang = url;
+    ['Masuk','Sisi'].forEach(function(t){
+      var g = el('logo'+t), k = el('kotak'+t);
+      if(!g) return;
+      g.src = url; g.alt = 'Logo perusahaan';
+      g.classList.remove('sembunyi');
+      if(k) k.classList.add('sembunyi');
+    });
+    terapkanGayaLogo(url, (gaya || 'OTOMATIS').toUpperCase());
+  };
+  /* Gambar gagal dimuat: kotak FJM dibiarkan, jangan tampilkan ikon rusak. */
+  uji.onerror = function(){ logoTerpasang = ''; };
+  uji.src = url;
+}
+
+function terapkanGayaLogo(url, gaya){
+  if(gaya === 'ASLI')       return gantiKelasLogo('');
+  if(gaya === 'PUTIH')      return gantiKelasLogo('logo-putih');
+  if(gaya === 'KOTAK PUTIH')return gantiKelasLogo('logo-alas');
+  /* OTOMATIS: ukur terang-gelapnya logo, lalu putuskan sendiri. */
+  ukurTerangLogo(url, function(terang){
+    if(terang === null) gantiKelasLogo('logo-alas');      /* tak terukur: cara teraman */
+    else if(terang < 0.5) gantiKelasLogo('logo-putih');   /* logo gelap: jadikan putih */
+    else gantiKelasLogo('');                              /* logo sudah terang */
+  });
+}
+
+function gantiKelasLogo(kelas){
+  ['Masuk','Sisi'].forEach(function(t){
+    var g = el('logo'+t); if(!g) return;
+    g.classList.remove('logo-putih','logo-alas');
+    if(kelas) g.classList.add(kelas);
+  });
+}
+
+/* Menghitung rata-rata terang piksel logo (0 gelap - 1 terang), hanya
+   piksel yang tidak tembus pandang yang dihitung, supaya latar
+   transparan PNG tidak ikut membuat hasilnya seolah terang. */
+function ukurTerangLogo(url, selesai){
+  var im = new Image();
+  im.crossOrigin = 'anonymous';
+  im.onload = function(){
+    try{
+      var n = 64, c = document.createElement('canvas');
+      c.width = n; c.height = n;
+      var g = c.getContext('2d');
+      g.drawImage(im, 0, 0, n, n);
+      var d = g.getImageData(0, 0, n, n).data, jum = 0, bobot = 0;
+      for(var i = 0; i < d.length; i += 4){
+        var a = d[i+3] / 255;
+        if(a < 0.15) continue;
+        jum += a * (0.2126*d[i] + 0.7152*d[i+1] + 0.0722*d[i+2]);
+        bobot += a;
+      }
+      selesai(bobot ? (jum / bobot) / 255 : null);
+    }catch(e){ selesai(null); }   /* server gambar melarang pembacaan warna */
+  };
+  im.onerror = function(){ selesai(null); };
+  im.src = url;
+}
+
+/* Logo harus sudah tampil SEBELUM siapa pun mengetik badge, jadi diambil
+   sendiri saat halaman dibuka - tidak menunggu proses masuk. */
+function muatLogoAwal(){
+  google.script.run
+    .withSuccessHandler(function(r){ if(r && r.ok && r.logo) pasangLogo(r.logo, r.gayaLogo); })
+    .withFailureHandler(function(){})
+    .svrAwal();
+}
+
+/* ================= SESI TERSIMPAN =================
+   Token sesi disimpan di HP supaya aplikasi tidak kembali ke layar
+   masuk setiap kali halaman dimuat ulang. Umurnya 6 jam, sama dengan
+   umur sesi di server, dan langsung dihapus saat menekan Keluar. */
+var KUNCI_SESI = 'sesiStokFJM';
+
+function simpanSesiLokal(r){
+  if(!r || !r.token) return;
+  try {
+    localStorage.setItem(KUNCI_SESI, JSON.stringify({
+      token: r.token, halaman: halKini, kedaluwarsa: Date.now() + 6*60*60*1000
+    }));
+  } catch(e){}
+}
+function ambilSesiLokal(){
+  try {
+    var s = JSON.parse(localStorage.getItem(KUNCI_SESI) || 'null');
+    if(!s || !s.token) return null;
+    if(s.kedaluwarsa && Date.now() > s.kedaluwarsa){ hapusSesiLokal(); return null; }
+    return s;
+  } catch(e){ return null; }
+}
+function hapusSesiLokal(){ try { localStorage.removeItem(KUNCI_SESI); } catch(e){} }
+
+function sesiHabis(){
+  hapusSesiLokal();
+  U = null; F = {}; tutupLembar();
+  el('apl').classList.add('sembunyi');
+  el('layarMasuk').classList.remove('sembunyi');
+  pesan('pesanMasuk','Sesi sudah berakhir. Masukkan badge dan PIN lagi.');
 }
 function inisial(nama){
   var p = String(nama||'').trim().split(/\s+/);
@@ -563,8 +700,27 @@ function gambarNavigasi(){
              '<span>'+HALAMAN[k].pendek+'</span></button>'; }).join('') +
     '<button onclick="bukaLembar()">'+ikon('pin',20)+'<span>Lainnya</span></button>';
 }
+/* Memuat ulang isi halaman yang sedang dibuka, tanpa memuat ulang seluruh
+   aplikasi. Dipakai sebagai pengganti tombol muat ulang browser, yang tidak
+   ada ketika aplikasi dipasang di layar utama HP. */
+function segarkan(){
+  if(!U) return;
+  var t = el('tblSegar');
+  if(t) t.classList.add('berputar');
+  setTimeout(function(){ if(t) t.classList.remove('berputar'); }, 1400);
+  if(halKini === 'input'){
+    if(F && F.items && F.items.length &&
+       !confirm('Ada ' + F.items.length + ' barang yang belum dikirim di halaman ini.\n\n' +
+                'Menyegarkan akan mengosongkan isian itu. Lanjutkan?')) return;
+    mulaiInput();
+  }
+  else if(halKini === 'manajer') muatManajer((dataManajer && dataManajer.filter) || {});
+  else window[HALAMAN[halKini].muat]();
+}
+
 function buka(hal){
   halKini = hal;
+  simpanSesiLokal(U || {});
   tutupLembar();
   ['beranda','input','stok','riwayat','manajer','pin'].forEach(function(x){
     var s = el('hal'+x.charAt(0).toUpperCase()+x.slice(1));
@@ -603,30 +759,58 @@ function masuk(){
   if(!b || !p){ pesan('pesanMasuk','Nomor badge dan PIN harus diisi.'); return; }
   panggil('svrMasuk', [b,p], function(r){
     if(!r.ok){ pesan('pesanMasuk', aman(r.pesan)); return; }
-    U = r;
-    if(r.logo){
-      el('logoSisi').src = r.logo; el('logoSisi').classList.remove('sembunyi');
-      el('kotakSisi').classList.add('sembunyi');
-      el('logoMasuk').src = r.logo; el('logoMasuk').classList.remove('sembunyi');
-      el('kotakMasuk').classList.add('sembunyi');
-    }
-    el('hNama').textContent = r.nama;
-    el('hPeran').textContent = r.peran + ' \u00b7 ' +
-      (r.bagian.length>1 ? r.bagian.length+' bagian' : (r.bagian[0]||'-'));
-    el('avatar').textContent = inisial(r.nama);
-    el('inPin').value=''; pesan('pesanMasuk','');
-    el('layarMasuk').classList.add('sembunyi');
-    el('apl').classList.remove('sembunyi');
-    gambarNavigasi();
-    buka('beranda');
+    masukAplikasi(r, 'beranda');
   }, 'Memeriksa badge dan PIN...');
 }
+
+/* Satu pintu masuk ke aplikasi, dipakai baik oleh proses masuk biasa
+   maupun oleh pemulihan sesi setelah halaman dimuat ulang. */
+function masukAplikasi(r, halaman){
+  U = r;
+  pasangLogo(r.logo, r.gayaLogo);
+  el('hNama').textContent = r.nama;
+  el('hPeran').textContent = r.peran + ' \u00b7 ' +
+    (r.bagian.length>1 ? r.bagian.length+' bagian' : (r.bagian[0]||'-'));
+  el('avatar').textContent = inisial(r.nama);
+  el('inPin').value=''; pesan('pesanMasuk','');
+  el('layarMasuk').classList.add('sembunyi');
+  el('apl').classList.remove('sembunyi');
+  gambarNavigasi();
+  var d = daftarHalaman();
+  buka(d.indexOf(halaman) >= 0 ? halaman : 'beranda');
+  simpanSesiLokal(r);
+}
+
 function keluar(){
   if(!confirm('Keluar dari aplikasi?')) return;
+  hapusSesiLokal();
   U = null; F = {}; tutupLembar();
   el('apl').classList.add('sembunyi');
   el('layarMasuk').classList.remove('sembunyi');
 }
+
+/* Dijalankan sekali saat halaman dibuka. Kalau masih ada sesi yang sah di
+   HP ini, aplikasi langsung terbuka di halaman terakhir tanpa minta PIN
+   lagi; kalau sudah lewat 6 jam, barulah layar masuk yang muncul. */
+function pulihkanSesi(){
+  var s = ambilSesiLokal();
+  if(!s) return;
+  sibuk(true, 'Memulihkan sesi...');
+  google.script.run
+    .withSuccessHandler(function(r){
+      sibuk(false);
+      if(r && r.ok) masukAplikasi(r, s.halaman || 'beranda');
+      else hapusSesiLokal();
+    })
+    .withFailureHandler(function(){ sibuk(false); hapusSesiLokal(); })
+    .svrSesi(s.token);
+}
+/* Ditunda sampai seluruh berkas selesai dibaca, karena fungsi halaman
+   dan penghubung ke server baru tersedia di blok-blok berikutnya. */
+window.addEventListener('DOMContentLoaded', function(){
+  muatLogoAwal();
+  pulihkanSesi();
+});
 </script>
 <script>
 /* ================= BERANDA ================= */
@@ -1368,7 +1552,7 @@ function batalkan(id){
    biasa sehingga seluruh kode aplikasi di atas tidak berubah.
    ============================================================ */
 (function(){
-  var DAFTAR = ['svrBarangUntuk', 'svrBatal', 'svrDaftarBarangSemua', 'svrDaftarPengawas', 'svrGantiPin', 'svrIsiTransaksi', 'svrKartuStok', 'svrManajer', 'svrMasuk', 'svrRekapPengawas', 'svrResetPin', 'svrRiwayat', 'svrSimpan', 'svrStokSaya'];
+  var DAFTAR = ['svrAwal', 'svrBarangUntuk', 'svrBatal', 'svrDaftarBarangSemua', 'svrDaftarPengawas', 'svrGantiPin', 'svrIsiTransaksi', 'svrKartuStok', 'svrManajer', 'svrMasuk', 'svrRekapPengawas', 'svrResetPin', 'svrRiwayat', 'svrSesi', 'svrSimpan', 'svrStokSaya'];
 
   function kirim(nama, args, sukses, gagal){
     if(typeof ALAMAT_API === 'undefined' || !ALAMAT_API ||
