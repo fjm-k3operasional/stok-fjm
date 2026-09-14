@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Stok Operasional FJM</title>
+<!-- ============================================================
+     ALAMAT APLIKASI  -  ganti baris di bawah dengan alamat Web App
+     Apps Script Anda (yang berakhiran /exec), lalu simpan.
+     ============================================================ -->
+<script>
+var ALAMAT_API = 'TEMPEL_ALAMAT_WEB_APP_DI_SINI';
+</script>
+
+<style>
+:root{
+  --tinta:#0f172a; --tinta-2:#1e293b; --tinta-3:#334155;
+  --abu:#64748b; --abu-2:#94a3b8; --abu-m:#e2e8f0; --abu-t:#f1f5f9;
+  --dasar:#f6f8fa; --kertas:#ffffff; --garis:#e2e8f0; --garis-2:#cbd5e1;
+  --teal:#0d9488; --teal-t:#0f766e; --teal-m:#ccfbf1; --teal-s:#f0fdfa;
+  --merah:#dc2626; --merah-m:#fee2e2;
+  --kuning:#d97706; --kuning-m:#fef3c7;
+  --hijau:#16a34a; --hijau-m:#dcfce7;
+  --ungu:#4f46e5; --ungu-m:#e0e7ff;
+  --bayang:0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+  --bayang-2:0 4px 12px rgba(15,23,42,.08);
+  --sisi:248px; --atas:58px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;background:var(--dasar);color:var(--tinta);
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+.sembunyi{display:none!important}
+svg{display:block;flex:none}
+a{color:var(--teal-t);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ================= LAYAR MASUK ================= */
+#layarMasuk{position:fixed;inset:0;display:grid;grid-template-columns:1.1fr 1fr;z-index:50}
+.masuk-kiri{background:linear-gradient(150deg,#0f172a 0%,#134e4a 55%,#0d9488 130%);
+  color:#fff;padding:52px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
+.masuk-kiri::after{content:"";position:absolute;right:-140px;bottom:-160px;width:420px;height:420px;
+  border-radius:50%;background:rgba(255,255,255,.05)}
+.masuk-kiri::before{content:"";position:absolute;right:40px;top:-120px;width:280px;height:280px;
+  border-radius:50%;background:rgba(255,255,255,.04)}
+.masuk-merek{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.masuk-merek img{height:42px;background:#fff;border-radius:8px;padding:4px}
+.masuk-merek .kotak{width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.14);
+  display:grid;place-items:center;font-weight:800;font-size:15px;letter-spacing:.5px}
+.masuk-kiri h1{font-size:30px;line-height:1.25;margin:0 0 14px;font-weight:700;position:relative;z-index:1}
+.masuk-kiri p{margin:0;color:#a7f3d0;font-size:14px;max-width:380px;position:relative;z-index:1}
+.masuk-poin{list-style:none;padding:0;margin:26px 0 0;position:relative;z-index:1}
+.masuk-poin li{display:flex;gap:10px;align-items:flex-start;margin-bottom:11px;font-size:13px;color:#cbd5e1}
+.masuk-poin svg{margin-top:2px;color:#5eead4}
+.masuk-kaki{font-size:11.5px;color:rgba(255,255,255,.55);position:relative;z-index:1}
+.masuk-kanan{background:var(--kertas);display:flex;align-items:center;justify-content:center;padding:32px;overflow:auto}
+.masuk-kotak{width:100%;max-width:352px}
+.masuk-kotak h2{margin:0 0 6px;font-size:21px}
+.masuk-kotak .sub{color:var(--abu);font-size:13px;margin:0 0 26px}
+@media(max-width:900px){
+  #layarMasuk{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .masuk-kiri{padding:26px 22px}
+  .masuk-kiri h1{font-size:21px;margin-bottom:6px}
+  .masuk-poin,.masuk-kaki,.masuk-kiri p{display:none}
+  .masuk-kanan{align-items:flex-start;padding:28px 22px 40px}
+}
+
+/* ================= KERANGKA APLIKASI ================= */
+.apl{display:grid;grid-template-columns:var(--sisi) 1fr;min-height:100vh}
+
+/* ---- sisi kiri ---- */
+.sisi{background:var(--tinta);color:#cbd5e1;display:flex;flex-direction:column;
+  position:fixed;inset:0 auto 0 0;width:var(--sisi);z-index:30}
+.sisi-merek{display:flex;align-items:center;gap:11px;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sisi-merek img{height:34px;background:#fff;border-radius:7px;padding:3px}
+.sisi-merek .kotak{width:34px;height:34px;border-radius:8px;flex:none;
+  background:linear-gradient(135deg,#14b8a6,#0f766e);display:grid;place-items:center;
+  color:#fff;font-weight:800;font-size:12px;letter-spacing:.4px}
+.sisi-merek b{display:block;color:#fff;font-size:12.5px;letter-spacing:.4px;line-height:1.25}
+.sisi-merek span{display:block;font-size:10.5px;color:#64748b}
+.sisi nav{flex:1;padding:12px 10px;overflow:auto}
+.sisi .kel-nav{font-size:10px;letter-spacing:.8px;color:#475569;text-transform:uppercase;
+  padding:12px 10px 6px;font-weight:700}
+.sisi nav button{width:100%;display:flex;align-items:center;gap:11px;background:none;border:0;
+  color:#cbd5e1;padding:9px 11px;border-radius:8px;cursor:pointer;font:inherit;font-size:13.5px;
+  text-align:left;margin-bottom:2px;position:relative}
+.sisi nav button:hover{background:rgba(255,255,255,.06);color:#fff}
+.sisi nav button.aktif{background:rgba(20,184,166,.16);color:#5eead4;font-weight:600}
+.sisi nav button.aktif::before{content:"";position:absolute;left:-10px;top:7px;bottom:7px;
+  width:3px;border-radius:0 3px 3px 0;background:#14b8a6}
+.sisi-kaki{border-top:1px solid rgba(255,255,255,.07);padding:12px;display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:linear-gradient(135deg,#14b8a6,#0f766e);color:#fff;font-weight:700;font-size:12.5px}
+.sisi-kaki .siapa{flex:1;min-width:0}
+.sisi-kaki b{display:block;color:#fff;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sisi-kaki span{display:block;font-size:10.5px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sisi-kaki button{background:rgba(255,255,255,.07);border:0;color:#cbd5e1;width:32px;height:32px;
+  border-radius:7px;cursor:pointer;display:grid;place-items:center;flex:none}
+.sisi-kaki button:hover{background:var(--merah);color:#fff}
+
+/* ---- kolom utama ---- */
+.utama{grid-column:2;display:flex;flex-direction:column;min-width:0;overflow-x:hidden}
+.atas{min-height:var(--atas);background:var(--kertas);border-bottom:1px solid var(--garis);
+  display:flex;align-items:center;gap:12px;padding:0 22px;position:sticky;top:0;z-index:20}
+.atas .tbl-panel{display:none;background:var(--abu-t);border:0;width:36px;height:36px;
+  border-radius:8px;cursor:pointer;place-items:center;color:var(--tinta)}
+.atas .judul{flex:1;min-width:0}
+.atas .judul b{display:block;font-size:15px;line-height:1.25}
+.atas .judul span{display:block;font-size:11.5px;color:var(--abu);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.atas .aksi{display:flex;gap:8px;align-items:center}
+.kanvas{padding:20px 22px 34px;flex:1;min-width:0;overflow-x:hidden}
+.lebar{max-width:1480px;margin:0 auto;min-width:0}
+
+/* ---- navigasi bawah (HP) ---- */
+.nav-bawah{display:none;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--kertas);
+  border-top:1px solid var(--garis);padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  box-shadow:0 -2px 10px rgba(15,23,42,.06)}
+.nav-bawah button{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;
+  gap:3px;padding:6px 2px;color:var(--abu);font:inherit;font-size:10px;font-weight:600;cursor:pointer;
+  border-radius:8px;min-width:0}
+.nav-bawah button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.nav-bawah button.aktif{color:var(--teal-t)}
+.nav-bawah button.aktif svg{color:var(--teal)}
+
+/* ---- tirai menu tambahan (HP) ---- */
+.selimut{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:40}
+.lembar{position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--kertas);
+  border-radius:16px 16px 0 0;padding:10px 10px calc(14px + env(safe-area-inset-bottom));
+  box-shadow:0 -6px 24px rgba(15,23,42,.2)}
+.lembar .pegangan{width:38px;height:4px;border-radius:2px;background:var(--garis-2);margin:4px auto 10px}
+.lembar button{width:100%;display:flex;align-items:center;gap:12px;background:none;border:0;
+  padding:13px 14px;border-radius:10px;cursor:pointer;font:inherit;font-size:14px;text-align:left;color:var(--tinta)}
+.lembar button:hover{background:var(--abu-t)}
+.lembar button.bahaya{color:var(--merah)}
+
+@media(max-width:1023px){
+  .apl{grid-template-columns:1fr}
+  .sisi{display:none}
+  .utama{grid-column:1}
+  .nav-bawah{display:flex}
+  .kanvas{padding:14px 14px 84px}
+  .atas{padding:0 14px}
+  .atas .tbl-panel{display:grid}
+}
+
+/* ================= KOMPONEN ================= */
+.kartu{background:var(--kertas);border:1px solid var(--garis);border-radius:12px;
+  box-shadow:var(--bayang);min-width:0;overflow:hidden}
+.kartu>h3{margin:0;padding:13px 16px;font-size:12px;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--abu);border-bottom:1px solid var(--garis);display:flex;align-items:center;
+  justify-content:space-between;gap:10px;font-weight:700;flex-wrap:wrap}
+.kartu>h3 .kanan-kecil{text-transform:none;letter-spacing:0;font-weight:500;font-size:11.5px}
+.kartu .isi{padding:16px}
+.kartu+.kartu{margin-top:16px}
+
+.grid{display:grid;gap:16px}
+/* Anak grid harus boleh menyusut; tanpa ini tabel lebar mendorong seluruh
+   halaman jadi lebih lebar dari layar HP. */
+.grid>*,.wisaya>*{min-width:0}
+.g-auto{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+.g-2{grid-template-columns:1.35fr 1fr}
+.g-ubin{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+@media(max-width:660px){
+  .grid{gap:10px}
+  .g-ubin{grid-template-columns:1fr 1fr}
+  .ubin{padding:11px 12px;gap:10px}
+  .ubin .lambang{width:30px;height:30px}
+  .ubin b{font-size:15px}
+  .ubin span{font-size:9.5px}
+}
+@media(max-width:400px){.ubin{flex-direction:column;gap:7px}}
+@media(max-width:1100px){.g-2{grid-template-columns:1fr}}
+
+/* ---- ubin angka ---- */
+.ubin{background:var(--kertas);border:1px solid var(--garis);border-radius:12px;padding:15px 16px;
+  box-shadow:var(--bayang);display:flex;gap:13px;align-items:flex-start}
+.ubin .lambang{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;flex:none}
+.ubin b{display:block;font-size:20px;line-height:1.25;letter-spacing:-.3px}
+.ubin span{display:block;font-size:11px;color:var(--abu);margin-top:2px;letter-spacing:.2px}
+.u-teal .lambang{background:var(--teal-m);color:var(--teal-t)}
+.u-ungu .lambang{background:var(--ungu-m);color:var(--ungu)}
+.u-kuning .lambang{background:var(--kuning-m);color:var(--kuning)}
+.u-merah .lambang{background:var(--merah-m);color:var(--merah)}
+.u-hijau .lambang{background:var(--hijau-m);color:var(--hijau)}
+
+/* ---- tombol ---- */
+.tbl{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;
+  border:1px solid transparent;border-radius:9px;font:inherit;font-size:13.5px;font-weight:600;
+  cursor:pointer;white-space:nowrap}
+.tbl-utama{background:var(--teal);color:#fff}
+.tbl-utama:hover{background:var(--teal-t)}
+.tbl-diam{background:var(--kertas);color:var(--tinta);border-color:var(--garis-2)}
+.tbl-diam:hover{background:var(--abu-t)}
+.tbl-merah{background:var(--merah);color:#fff}
+.tbl-lebar{width:100%}
+.tbl-kecil{padding:6px 11px;font-size:12px;border-radius:7px}
+.baris-tbl{display:flex;gap:10px;margin-top:18px}
+.baris-tbl .tbl{flex:1}
+@media(max-width:520px){.baris-tbl{flex-direction:column-reverse}}
+
+/* ---- isian ---- */
+label{display:block;font-size:11.5px;font-weight:700;color:var(--abu);margin:0 0 6px;letter-spacing:.3px}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--garis-2);border-radius:9px;
+  font:inherit;font-size:14px;background:var(--kertas);color:var(--tinta)}
+input:focus,select:focus,textarea:focus{outline:3px solid var(--teal-m);border-color:var(--teal)}
+textarea{min-height:82px;resize:vertical}
+.kel{margin-bottom:15px}
+.pin{letter-spacing:9px;text-align:center;font-size:19px;font-weight:700}
+.baris-isian{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+
+/* ---- pilihan besar ---- */
+.pilih{display:flex;align-items:center;gap:13px;width:100%;text-align:left;background:var(--kertas);
+  border:1px solid var(--garis);border-radius:11px;padding:14px 16px;margin-bottom:9px;cursor:pointer;
+  font:inherit;font-size:14px;font-weight:600;color:var(--tinta)}
+.pilih:hover{border-color:var(--teal);background:var(--teal-s);box-shadow:var(--bayang)}
+.pilih .lambang{width:34px;height:34px;border-radius:9px;background:var(--abu-t);color:var(--tinta-3);
+  display:grid;place-items:center;flex:none}
+.pilih:hover .lambang{background:var(--teal-m);color:var(--teal-t)}
+.pilih .tx{flex:1;min-width:0}
+.pilih small{display:block;font-weight:400;font-size:11.5px;color:var(--abu);margin-top:2px;line-height:1.4}
+.pilih-grid{display:grid;gap:9px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.pilih-grid .pilih{margin-bottom:0}
+
+/* ---- wisaya ---- */
+.wisaya{display:grid;grid-template-columns:210px 1fr;gap:20px;align-items:start}
+@media(max-width:900px){.wisaya{grid-template-columns:1fr}}
+.jejak{background:var(--kertas);border:1px solid var(--garis);border-radius:12px;padding:12px;
+  box-shadow:var(--bayang);position:sticky;top:calc(var(--atas) + 20px)}
+.jejak ol{list-style:none;margin:0;padding:0;counter-reset:l}
+.jejak li{display:flex;gap:11px;align-items:center;padding:8px 8px;border-radius:8px;
+  font-size:12.5px;color:var(--abu);counter-increment:l}
+.jejak li .bulat{width:23px;height:23px;border-radius:50%;flex:none;display:grid;place-items:center;
+  font-size:11px;font-weight:700;background:var(--abu-t);color:var(--abu)}
+.jejak li .bulat::before{content:counter(l)}
+.jejak li.lewat .bulat{background:var(--teal-m);color:var(--teal-t)}
+.jejak li.lewat .bulat::before{content:"\2713"}
+.jejak li.kini{background:var(--teal-s);color:var(--teal-t);font-weight:700}
+.jejak li.kini .bulat{background:var(--teal);color:#fff}
+@media(max-width:900px){
+  .jejak{position:static;padding:8px}
+  .jejak ol{display:flex;gap:4px;overflow-x:auto;max-width:100%}
+  .jejak li{flex-direction:column;gap:5px;min-width:66px;text-align:center;font-size:10px;padding:6px 3px}
+}
+
+/* ---- tabel ---- */
+.gulung{overflow-x:auto;max-width:100%;border-radius:11px;border:1px solid var(--garis);background:var(--kertas)}
+.gulung table{margin:0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--abu-t);color:var(--tinta-3);padding:10px 13px;text-align:left;font-weight:700;
+  white-space:nowrap;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;
+  border-bottom:1px solid var(--garis);position:sticky;top:0}
+td{padding:10px 13px;border-bottom:1px solid var(--abu-t);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:#fbfdfe}
+.kanan{text-align:right}.tengah{text-align:center}
+.tebal{font-weight:700}
+.mono{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---- keranjang ---- */
+.item{display:flex;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--garis);
+  border-radius:10px;margin-bottom:8px;background:var(--kertas)}
+.item .nm{flex:1;min-width:0}
+.item .nm b{display:block;font-size:13.5px;font-weight:600}
+.item .nm span{display:block;font-size:11.5px;color:var(--abu)}
+.item input{width:78px;text-align:center;padding:8px;font-weight:700}
+.item .buang{background:var(--merah-m);color:var(--merah);border:0;border-radius:8px;width:34px;
+  height:34px;cursor:pointer;flex:none;display:grid;place-items:center}
+.item .buang:hover{background:var(--merah);color:#fff}
+
+/* ---- lencana & pesan ---- */
+.lencana{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700;
+  letter-spacing:.3px;white-space:nowrap}
+.l-hijau{background:var(--hijau-m);color:#166534}
+.l-merah{background:var(--merah-m);color:#991b1b}
+.l-kuning{background:var(--kuning-m);color:#92400e}
+.l-abu{background:var(--abu-m);color:var(--tinta-3)}
+.l-teal{background:var(--teal-m);color:var(--teal-t)}
+.l-ungu{background:var(--ungu-m);color:var(--ungu)}
+.pesan{padding:12px 15px;border-radius:10px;font-size:13px;margin-bottom:14px;line-height:1.55}
+.p-merah{background:var(--merah-m);color:#991b1b;border:1px solid #fca5a5}
+.p-hijau{background:var(--hijau-m);color:#166534;border:1px solid #86efac}
+.p-kuning{background:var(--kuning-m);color:#92400e;border:1px solid #fcd34d}
+.p-abu{background:var(--abu-t);color:var(--tinta-3);border:1px solid var(--garis)}
+
+/* ---- tab ---- */
+.tab{display:flex;gap:4px;background:var(--kertas);border:1px solid var(--garis);border-radius:11px;
+  padding:5px;overflow-x:auto;box-shadow:var(--bayang);margin-bottom:16px}
+.tab button{background:none;border:0;padding:8px 15px;font:inherit;font-size:13px;font-weight:600;
+  color:var(--abu);cursor:pointer;white-space:nowrap;border-radius:8px}
+.tab button:hover{background:var(--abu-t);color:var(--tinta)}
+.tab button.aktif{background:var(--teal);color:#fff}
+
+/* ---- unggah ---- */
+.unggah{border:1.5px dashed var(--garis-2);border-radius:11px;padding:18px;background:var(--abu-t);
+  margin-bottom:11px;display:flex;gap:14px;align-items:center}
+.unggah .lambang{width:40px;height:40px;border-radius:10px;background:var(--kertas);color:var(--abu);
+  display:grid;place-items:center;flex:none;border:1px solid var(--garis)}
+.unggah .tx{flex:1;min-width:0}
+.unggah b{display:block;font-size:13.5px;margin-bottom:2px}
+.unggah small{color:var(--abu);font-size:11.5px}
+.unggah input[type=file]{margin-top:9px;font-size:12px;background:none;border:0;padding:0;width:auto}
+.berkas-ok{font-size:11.5px;color:var(--hijau);font-weight:700;margin-top:5px}
+@media(max-width:520px){.unggah{flex-direction:column;align-items:stretch;text-align:left}}
+
+/* ---- bilah ---- */
+.bilah{background:var(--abu-m);border-radius:5px;height:8px;overflow:hidden}
+.bilah i{display:block;height:8px;border-radius:5px;background:var(--teal)}
+
+/* ---- lain-lain ---- */
+@media(max-width:660px){
+  table{font-size:12px}
+  th{padding:8px 9px;font-size:9.5px}
+  td{padding:8px 9px}
+  td,th{white-space:nowrap}          /* jangan pecah kata - digulung mendatar saja */
+  .hp-sembunyi{display:none}
+  .kartu>h3{padding:11px 13px}
+  .kartu .isi{padding:13px}
+  .tab button{padding:7px 12px;font-size:12.5px}
+}
+.kosong{text-align:center;color:var(--abu);padding:34px 16px;font-size:13px}
+.kosong svg{margin:0 auto 10px;color:var(--garis-2)}
+.catatan{font-size:11.5px;color:var(--abu);margin-top:6px;line-height:1.5}
+.daftar-cari{max-height:330px;overflow:auto;padding-right:2px}
+#tirai{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:99;display:grid;place-items:center}
+#tirai div{background:var(--kertas);padding:18px 26px;border-radius:11px;font-weight:600;font-size:13px;
+  display:flex;align-items:center;gap:11px;box-shadow:var(--bayang-2)}
+.putar{width:15px;height:15px;border:2px solid var(--abu-m);border-top-color:var(--teal);
+  border-radius:50%;animation:p .7s linear infinite;flex:none}
+@keyframes p{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div id="tirai" class="sembunyi"><div><span class="putar"></span><span id="tiraiTeks">Memuat...</span></div></div>
+
+<!-- ============ MASUK ============ -->
+<section id="layarMasuk">
+  <div class="masuk-kiri">
+    <div class="masuk-merek">
+      <img id="logoMasuk" class="sembunyi" alt="">
+      <div class="kotak" id="kotakMasuk">FJM</div>
+      <div>
+        <div style="font-weight:700;font-size:13px;letter-spacing:.4px">PT FOKUS JASA MITRA</div>
+        <div style="font-size:11px;color:#94a3b8">Bagian Operasional</div>
+      </div>
+    </div>
+    <div>
+      <h1>Sistem Stok<br>Operasional</h1>
+      <p>Pencatatan barang masuk dan keluar oleh pengawas, lengkap dengan bukti dokumen dan pemantauan anggaran tiap bagian.</p>
+      <ul class="masuk-poin">
+        <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Sisa stok terpantau langsung per bagian</li>
+        <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Tiap pergerakan dilampiri foto dan dokumen</li>
+        <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Laporan bulanan siap tanda tangan</li>
+      </ul>
+    </div>
+    <div class="masuk-kaki">Gunakan nomor badge dan PIN yang diberikan admin operasional.</div>
+  </div>
+  <div class="masuk-kanan">
+    <div class="masuk-kotak">
+      <h2>Masuk</h2>
+      <p class="sub">Silakan masukkan nomor badge dan PIN Anda.</p>
+      <div id="pesanMasuk"></div>
+      <div class="kel">
+        <label>NOMOR BADGE</label>
+        <input id="inBadge" autocomplete="off" placeholder="contoh: K.123456">
+      </div>
+      <div class="kel">
+        <label>PIN</label>
+        <input id="inPin" type="password" inputmode="numeric" class="pin" placeholder="······">
+      </div>
+      <button class="tbl tbl-utama tbl-lebar" onclick="masuk()">MASUK</button>
+      <p class="catatan" style="margin-top:16px">Lupa PIN? Hubungi admin operasional untuk diatur ulang.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ KERANGKA ============ -->
+<div id="apl" class="apl sembunyi">
+  <aside class="sisi">
+    <div class="sisi-merek">
+      <img id="logoSisi" class="sembunyi" alt="">
+      <div class="kotak" id="kotakSisi">FJM</div>
+      <div style="min-width:0">
+        <b>STOK OPERASIONAL</b>
+        <span>PT Fokus Jasa Mitra</span>
+      </div>
+    </div>
+    <nav id="navSisi"></nav>
+    <div class="sisi-kaki">
+      <div class="avatar" id="avatar">?</div>
+      <div class="siapa">
+        <b id="hNama">-</b>
+        <span id="hPeran">-</span>
+      </div>
+      <button onclick="keluar()" title="Keluar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <div class="utama">
+    <header class="atas">
+      <button class="tbl-panel" onclick="bukaLembar()">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="judul">
+        <b id="judulHal">Ringkasan</b>
+        <span id="subHal">-</span>
+      </div>
+      <div class="aksi" id="aksiAtas"></div>
+    </header>
+
+    <div class="kanvas">
+      <div class="lebar">
+        <section id="halBeranda"></section>
+        <section id="halInput" class="sembunyi"></section>
+        <section id="halStok" class="sembunyi"></section>
+        <section id="halRiwayat" class="sembunyi"></section>
+        <section id="halManajer" class="sembunyi"></section>
+        <section id="halPin" class="sembunyi"></section>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav-bawah" id="navBawah"></nav>
+</div>
+
+<div id="selimut" class="selimut sembunyi" onclick="tutupLembar()"></div>
+<div id="lembar" class="lembar sembunyi"></div>
+
+<script>
+/* ================= KEADAAN ================= */
+var U = null, F = {}, LANGKAH = [], iLangkah = 0;
+var dataManajer = null, tabAktif = 'stok', halKini = 'beranda';
+
+var IKON = {
+  beranda:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  input:'<path d="M12 5v14"/><path d="M5 12h14"/>',
+  stok:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+  riwayat:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  manajer:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+  pin:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  keluar:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+  masuk2:'<path d="M12 5v14"/><polyline points="19 12 12 19 5 12"/>',
+  keluar2:'<path d="M12 19V5"/><polyline points="5 12 12 5 19 12"/>',
+  kembali:'<polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>',
+  rusak:'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  pindah:'<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+  uang:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  kotak:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',
+  dokumen:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+  foto:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
+  truk:'<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+  buang:'<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  kosong:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><line x1="12" y1="22" x2="12" y2="12"/>'
+};
+function ikon(n, u){
+  return '<svg width="'+(u||18)+'" height="'+(u||18)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+         'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(IKON[n]||'')+'</svg>';
+}
+
+/* 'muat' ditulis sebagai NAMA fungsi, bukan fungsinya langsung, karena
+   fungsi-fungsi itu baru didefinisikan di blok <script> berikutnya. */
+var HALAMAN = {
+  beranda : {judul:'Ringkasan',       sub:'Sekilas keadaan stok dan aktivitas terakhir', ikon:'beranda', pendek:'Ringkasan', muat:'muatBeranda'},
+  input   : {judul:'Input Transaksi', sub:'Barang masuk, keluar, pengembalian, rusak/hilang, pindah bagian', ikon:'input', pendek:'Input', muat:'mulaiInput'},
+  stok    : {judul:'Sisa Stok',       sub:'Sisa stok bagian yang Anda pegang', ikon:'stok', pendek:'Stok', muat:'muatStok'},
+  riwayat : {judul:'Riwayat',         sub:'Transaksi yang pernah dikirim beserta berkasnya', ikon:'riwayat', pendek:'Riwayat', muat:'muatRiwayat'},
+  manajer : {judul:'Halaman Manajer', sub:'Stok semua bagian, kartu stok, anggaran, dan seluruh transaksi', ikon:'manajer', pendek:'Manajer', muat:'muatManajerAwal'},
+  pin     : {judul:'Ganti PIN',       sub:'Ubah PIN Anda sendiri', ikon:'pin', pendek:'PIN', muat:'muatPin'}
+};
+
+/* ================= ALAT BANTU ================= */
+function el(id){ return document.getElementById(id); }
+function sibuk(on, teks){
+  el('tiraiTeks').textContent = teks || 'Memuat...';
+  el('tirai').classList.toggle('sembunyi', !on);
+}
+function rp(n){ return 'Rp ' + (Number(n)||0).toLocaleString('id-ID'); }
+function ang(n){ return (Number(n)||0).toLocaleString('id-ID'); }
+function aman(t){ return String(t==null?'':t).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function tik(t){ return String(t==null?'':t).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function pesan(wadah, teks, jenis){
+  var w = el(wadah); if(!w) return;
+  w.innerHTML = teks ? '<div class="pesan p-'+(jenis||'merah')+'">'+teks+'</div>' : '';
+}
+function kosong(teks){
+  return '<div class="kosong">'+ikon('kosong',34)+teks+'</div>';
+}
+function panggil(fungsi, args, lanjut, teksSibuk){
+  sibuk(true, teksSibuk);
+  google.script.run
+    .withSuccessHandler(function(r){ sibuk(false); lanjut(r); })
+    .withFailureHandler(function(e){
+      sibuk(false);
+      alert('Gagal terhubung: ' + (e && e.message ? e.message : e) + '\n\nPeriksa sinyal lalu coba lagi.');
+    })[fungsi].apply(null, args);
+}
+function inisial(nama){
+  var p = String(nama||'').trim().split(/\s+/);
+  return ((p[0]||'?')[0] + (p.length>1 ? p[p.length-1][0] : '')).toUpperCase();
+}
+
+/* ================= NAVIGASI ================= */
+function daftarHalaman(){
+  var d = ['beranda','input','stok','riwayat'];
+  if(U.peran==='MANAJER' || U.peran==='ADMIN') d.splice(1,0,'manajer');
+  if(U.peran==='MANAJER') d = d.filter(function(x){ return x!=='input'; });
+  d.push('pin');
+  return d;
+}
+function gambarNavigasi(){
+  var d = daftarHalaman();
+  el('navSisi').innerHTML =
+    '<div class="kel-nav">Menu</div>' +
+    d.filter(function(x){ return x!=='pin'; }).map(function(k){
+      return '<button data-hal="'+k+'" onclick="buka(\''+k+'\')">'+ikon(HALAMAN[k].ikon)+
+             '<span>'+HALAMAN[k].judul+'</span></button>'; }).join('') +
+    '<div class="kel-nav">Akun</div>' +
+    '<button data-hal="pin" onclick="buka(\'pin\')">'+ikon('pin')+'<span>Ganti PIN</span></button>';
+
+  var bawah = d.filter(function(x){ return x!=='pin'; }).slice(0,4);
+  el('navBawah').innerHTML = bawah.map(function(k){
+      return '<button data-hal="'+k+'" onclick="buka(\''+k+'\')">'+ikon(HALAMAN[k].ikon,20)+
+             '<span>'+HALAMAN[k].pendek+'</span></button>'; }).join('') +
+    '<button onclick="bukaLembar()">'+ikon('pin',20)+'<span>Lainnya</span></button>';
+}
+function buka(hal){
+  halKini = hal;
+  tutupLembar();
+  ['beranda','input','stok','riwayat','manajer','pin'].forEach(function(x){
+    var s = el('hal'+x.charAt(0).toUpperCase()+x.slice(1));
+    if(s) s.classList.toggle('sembunyi', x!==hal);
+  });
+  el('judulHal').textContent = HALAMAN[hal].judul;
+  el('subHal').textContent = HALAMAN[hal].sub;
+  el('aksiAtas').innerHTML = '';
+  Array.prototype.forEach.call(document.querySelectorAll('[data-hal]'), function(b){
+    b.classList.toggle('aktif', b.getAttribute('data-hal')===hal);
+  });
+  window.scrollTo(0,0);
+  window[HALAMAN[hal].muat]();
+}
+function bukaLembar(){
+  var d = daftarHalaman();
+  el('lembar').innerHTML = '<div class="pegangan"></div>' +
+    d.map(function(k){
+      return '<button onclick="buka(\''+k+'\')">'+ikon(HALAMAN[k].ikon,19)+HALAMAN[k].judul+'</button>';
+    }).join('') +
+    '<button class="bahaya" onclick="keluar()">'+ikon('keluar',19)+'Keluar</button>';
+  el('lembar').classList.remove('sembunyi');
+  el('selimut').classList.remove('sembunyi');
+}
+function tutupLembar(){
+  el('lembar').classList.add('sembunyi');
+  el('selimut').classList.add('sembunyi');
+}
+
+/* ================= MASUK / KELUAR ================= */
+el('inPin').addEventListener('keydown', function(e){ if(e.key==='Enter') masuk(); });
+el('inBadge').addEventListener('keydown', function(e){ if(e.key==='Enter') el('inPin').focus(); });
+
+function masuk(){
+  var b = el('inBadge').value.trim(), p = el('inPin').value.trim();
+  if(!b || !p){ pesan('pesanMasuk','Nomor badge dan PIN harus diisi.'); return; }
+  panggil('svrMasuk', [b,p], function(r){
+    if(!r.ok){ pesan('pesanMasuk', aman(r.pesan)); return; }
+    U = r;
+    if(r.logo){
+      el('logoSisi').src = r.logo; el('logoSisi').classList.remove('sembunyi');
+      el('kotakSisi').classList.add('sembunyi');
+      el('logoMasuk').src = r.logo; el('logoMasuk').classList.remove('sembunyi');
+      el('kotakMasuk').classList.add('sembunyi');
+    }
+    el('hNama').textContent = r.nama;
+    el('hPeran').textContent = r.peran + ' \u00b7 ' +
+      (r.bagian.length>1 ? r.bagian.length+' bagian' : (r.bagian[0]||'-'));
+    el('avatar').textContent = inisial(r.nama);
+    el('inPin').value=''; pesan('pesanMasuk','');
+    el('layarMasuk').classList.add('sembunyi');
+    el('apl').classList.remove('sembunyi');
+    gambarNavigasi();
+    buka('beranda');
+  }, 'Memeriksa badge dan PIN...');
+}
+function keluar(){
+  if(!confirm('Keluar dari aplikasi?')) return;
+  U = null; F = {}; tutupLembar();
+  el('apl').classList.add('sembunyi');
+  el('layarMasuk').classList.remove('sembunyi');
+}
+</script>
+<script>
+/* ================= BERANDA ================= */
+function muatBeranda(){
+  var w = el('halBeranda');
+  w.innerHTML = '<div class="grid g-ubin" id="ubinBeranda"></div>' +
+    '<div class="grid g-2" style="margin-top:16px;align-items:start">' +
+      '<div class="kartu"><h3>Transaksi Terakhir<span class="kanan-kecil" id="tautRiwayat"></span></h3>' +
+        '<div id="isiTrxBeranda"></div></div>' +
+      '<div>' +
+        '<div class="kartu"><h3>Aksi Cepat</h3><div class="isi" id="aksiCepat"></div></div>' +
+        '<div class="kartu"><h3>Stok Nilai Tertinggi<span class="kanan-kecil" id="tautStok"></span></h3>' +
+          '<div id="isiStokBeranda"></div></div>' +
+      '</div>' +
+    '</div>';
+
+  var cepat = [];
+  if(U.peran!=='MANAJER') cepat.push(['input','input','Input Transaksi','Catat pergerakan barang hari ini']);
+  cepat.push(['stok','stok','Lihat Sisa Stok','Bagian yang Anda pegang']);
+  if(U.peran==='MANAJER'||U.peran==='ADMIN')
+    cepat.push(['manajer','manajer','Halaman Manajer','Stok, kartu stok, PP, anggaran']);
+  cepat.push(['riwayat','riwayat','Riwayat Transaksi','Beserta berkas yang diunggah']);
+  el('aksiCepat').innerHTML = cepat.map(function(x){
+    return '<button class="pilih" onclick="buka(\''+x[0]+'\')"><span class="lambang">'+ikon(x[1])+
+      '</span><span class="tx">'+x[2]+'<small>'+x[3]+'</small></span></button>'; }).join('');
+
+  panggil('svrStokSaya',[U.token,null], function(s){
+    panggil('svrRiwayat',[U.token,{}], function(t){
+      var stok = (s && s.ok) ? s.stok : [];
+      var trx  = (t && t.ok) ? t.transaksi : [];
+      var bulanIni = new Date().toISOString().slice(0,10).slice(0,7);
+      var jmlBulan = trx.filter(function(x){ return x.bulan===bulanIni && x.status==='SAH'; }).length;
+      var habis = stok.filter(function(x){ return x.sisa<=0; }).length;
+      var kadaluwarsa = stok.filter(function(x){ return x.kedaluwarsa; }).length;
+      var ubin = [
+        ['u-teal','uang', rp(s && s.ok ? s.total : 0), 'NILAI STOK ANDA'],
+        ['u-ungu','kotak', ang(stok.length), 'JENIS BARANG BERSISA'],
+        ['u-hijau','riwayat', ang(jmlBulan), 'TRANSAKSI BULAN INI'],
+        [kadaluwarsa? 'u-merah':'u-kuning','rusak', ang(kadaluwarsa||habis),
+          kadaluwarsa ? 'KUPON KEDALUWARSA' : 'BARANG STOK HABIS']
+      ];
+      el('ubinBeranda').innerHTML = ubin.map(function(x){
+        return '<div class="ubin '+x[0]+'"><span class="lambang">'+ikon(x[1])+
+          '</span><div><b>'+x[2]+'</b><span>'+x[3]+'</span></div></div>'; }).join('');
+
+      el('tautRiwayat').innerHTML = trx.length
+        ? '<a href="#" onclick="buka(\'riwayat\');return false;">Lihat semua</a>' : '';
+      el('isiTrxBeranda').innerHTML = trx.length
+        ? tabelRingkas(trx.slice(0,12))
+        : kosong('Belum ada transaksi.');
+
+      var teratas = stok.slice().sort(function(a,b){ return b.nilai-a.nilai; }).slice(0,6);
+      el('tautStok').innerHTML = stok.length
+        ? '<a href="#" onclick="buka(\'stok\');return false;">Lihat semua</a>' : '';
+      el('isiStokBeranda').innerHTML = teratas.length
+        ? '<div class="gulung" style="border:0;border-radius:0"><table>' +
+          '<tr><th>BARANG</th><th class="tengah">SISA</th><th class="kanan">NILAI</th></tr>' +
+          teratas.map(function(s){
+            return '<tr><td>'+aman(s.nama)+'<div class="catatan">'+aman(s.bagian)+'</div></td>' +
+              '<td class="tengah tebal mono">'+ang(s.sisa)+' '+aman(s.satuan)+'</td>' +
+              '<td class="kanan mono">'+rp(s.nilai)+'</td></tr>'; }).join('') +
+          '</table></div>'
+        : kosong('Belum ada stok.');
+    }, 'Mengambil aktivitas terakhir...');
+  }, 'Menghitung ringkasan...');
+}
+function tabelRingkas(daftar){
+  return '<div class="gulung" style="border:0;border-radius:0">' +
+    '<table><tr><th>TANGGAL</th><th>JENIS</th><th>BAGIAN</th><th class="tengah">ITEM</th>' +
+    '<th class="kanan">NILAI</th></tr>' +
+    daftar.map(function(t){
+      return '<tr><td class="mono">'+aman(t.tanggal)+'</td><td>'+lencanaJenis(t.jenis)+
+        '</td><td>'+aman(t.bagian)+'</td><td class="tengah">'+ang(t.jumlahItem)+
+        '</td><td class="kanan mono">'+rp(t.total)+'</td></tr>'; }).join('') +
+    '</table></div>';
+}
+function lencanaJenis(j){
+  var w = {'MASUK':'l-hijau','KELUAR':'l-merah','PENGEMBALIAN':'l-teal',
+           'RUSAK/HILANG':'l-kuning','PINDAH':'l-ungu'}[j] || 'l-abu';
+  return '<span class="lencana '+w+'">'+aman(j)+'</span>';
+}
+
+/* ================= GANTI PIN ================= */
+function muatPin(){
+  el('halPin').innerHTML =
+    '<div class="kartu" style="max-width:460px"><h3>Ganti PIN</h3><div class="isi">' +
+    '<div id="pesanPin"></div>' +
+    '<div class="kel"><label>PIN LAMA</label><input id="pinLama" type="password" inputmode="numeric"></div>' +
+    '<div class="kel"><label>PIN BARU</label><input id="pinBaru" type="password" inputmode="numeric"></div>' +
+    '<div class="kel"><label>ULANGI PIN BARU</label><input id="pinBaru2" type="password" inputmode="numeric"></div>' +
+    '<button class="tbl tbl-utama tbl-lebar" onclick="gantiPin()">SIMPAN PIN BARU</button>' +
+    '</div></div>';
+}
+function gantiPin(){
+  if(el('pinBaru').value !== el('pinBaru2').value){ pesan('pesanPin','Ulangi PIN baru belum sama.'); return; }
+  panggil('svrGantiPin',[U.token, el('pinLama').value.trim(), el('pinBaru').value.trim()], function(r){
+    pesan('pesanPin', aman(r.pesan), r.ok?'hijau':'merah');
+    if(r.ok) ['pinLama','pinBaru','pinBaru2'].forEach(function(i){ el(i).value=''; });
+  }, 'Menyimpan PIN...');
+}
+</script>
+<script>
+/* ================= WISAYA INPUT ================= */
+var NAMA_LANGKAH = {bagian:'Bagian', jenis:'Jenis', rincian:'Rincian',
+                    barang:'Barang', berkas:'Berkas', ringkas:'Kirim'};
+
+function mulaiInput(){
+  F = { bagian:'', jenis:'', tanggal:U.hariIni, keterangan:'', idAsal:'', bagianTujuan:'',
+        items:[], berkas:{fotoBarang:[],dokumenPP:[],suratJalan:[]}, daftar:[], aturan:null,
+        tanpaSJ:[], maksMB:10 };
+  if(U.bagian.length === 1) F.bagian = U.bagian[0];
+  LANGKAH = [];
+  if(U.bagian.length > 1) LANGKAH.push('bagian');
+  LANGKAH.push('jenis','rincian','barang','berkas','ringkas');
+  iLangkah = 0;
+  el('halInput').innerHTML =
+    '<div class="wisaya">' +
+      '<div class="jejak"><ol id="jejakIsi"></ol></div>' +
+      '<div class="kartu"><h3 id="judulLangkah"></h3><div class="isi" id="isiLangkah"></div></div>' +
+    '</div>';
+  gambarLangkah();
+}
+function gambarLangkah(){
+  el('jejakIsi').innerHTML = LANGKAH.map(function(k,i){
+    var kelas = i===iLangkah ? 'kini' : (i<iLangkah ? 'lewat' : '');
+    return '<li class="'+kelas+'"><span class="bulat"></span><span>'+NAMA_LANGKAH[k]+'</span></li>';
+  }).join('');
+  var judul = {bagian:'Pilih bagian', jenis:'Pilih jenis transaksi', rincian:'Rincian transaksi',
+               barang:'Tambahkan barang', berkas:'Unggah berkas', ringkas:'Periksa lalu kirim'};
+  el('judulLangkah').innerHTML = judul[LANGKAH[iLangkah]] +
+    '<span class="kanan-kecil">Langkah '+(iLangkah+1)+' dari '+LANGKAH.length+'</span>';
+  ({bagian:lBagian, jenis:lJenis, rincian:lRincian, barang:lBarang,
+    berkas:lBerkas, ringkas:lRingkas})[LANGKAH[iLangkah]]();
+}
+function maju(){ if(iLangkah < LANGKAH.length-1){ iLangkah++; gambarLangkah(); } }
+function mundur(){ if(iLangkah>0){ iLangkah--; gambarLangkah(); } else buka('beranda'); }
+function tombolNav(labelMaju, aksiMaju){
+  return '<div class="baris-tbl">' +
+    '<button class="tbl tbl-diam" onclick="mundur()">Kembali</button>' +
+    (labelMaju ? '<button class="tbl tbl-utama" onclick="'+aksiMaju+'">'+labelMaju+'</button>' : '') +
+    '</div>';
+}
+
+function lBagian(){
+  el('isiLangkah').innerHTML =
+    '<p class="catatan" style="margin:0 0 14px">Stok dimiliki oleh bagian. Pilih bagian yang transaksinya akan dicatat.</p>' +
+    '<div class="pilih-grid">' + U.bagian.map(function(b){
+      return '<button class="pilih" onclick="pilihBagian(\''+tik(b)+'\')"><span class="lambang">'+
+             ikon('kotak')+'</span><span class="tx">'+aman(b)+'</span></button>';
+    }).join('') + '</div>' + tombolNav('','');
+}
+function pilihBagian(b){ F.bagian = b; maju(); }
+
+var URAI_JENIS = {
+  'MASUK':['masuk2','Barang datang dari Pengadaan dan masuk ke stok bagian'],
+  'KELUAR':['keluar2','Barang dipakai atau diserahkan ke lapangan'],
+  'PENGEMBALIAN':['kembali','Koreksi salah ambil \u2014 barang dikembalikan ke stok'],
+  'RUSAK/HILANG':['rusak','Barang keluar dari stok karena rusak, hilang, atau kedaluwarsa'],
+  'PINDAH':['pindah','Barang dipindahkan ke bagian lain']
+};
+function lJenis(){
+  el('isiLangkah').innerHTML =
+    '<div class="pesan p-abu" style="margin-bottom:14px">Bagian: <b>'+aman(F.bagian)+'</b></div>' +
+    '<div class="pilih-grid">' +
+    ['MASUK','KELUAR','PENGEMBALIAN','RUSAK/HILANG','PINDAH'].map(function(x){
+      return '<button class="pilih" onclick="pilihJenis(\''+x+'\')"><span class="lambang">'+
+        ikon(URAI_JENIS[x][0])+'</span><span class="tx">'+x+'<small>'+URAI_JENIS[x][1]+'</small></span></button>';
+    }).join('') + '</div>' + tombolNav('','');
+}
+function pilihJenis(x){
+  F.jenis = x; F.items = [];
+  panggil('svrBarangUntuk',[U.token, F.bagian, x, F.tanggal], function(r){
+    if(!r.ok){ alert(r.pesan); return; }
+    F.daftar = r.barang; F.aturan = r.matriks[x]; F.tanpaSJ = r.tanpaSJ;
+    F.maksMB = r.maksMB; F.pakaiPP = r.pakaiPP;
+    maju();
+  }, 'Mengambil daftar barang...');
+}
+
+function lRincian(){
+  var h = '<div class="baris-isian">' +
+    '<div class="kel"><label>TANGGAL TRANSAKSI</label>' +
+    '<input type="date" id="fTanggal" value="'+F.tanggal+'" max="'+U.hariIni+'"></div>';
+  if(F.aturan.bagianTujuan !== 'TIDAK DIPAKAI'){
+    h += '<div class="kel"><label>BAGIAN TUJUAN'+(F.aturan.bagianTujuan==='WAJIB'?' *':'')+
+         '</label><select id="fTujuan"><option value="">- pilih -</option>' +
+         (U.semuaBagian||U.bagian).filter(function(b){return b!==F.bagian;})
+           .map(function(b){return '<option>'+aman(b)+'</option>';}).join('') + '</select></div>';
+  }
+  if(F.aturan.idAsal !== 'TIDAK DIPAKAI'){
+    h += '<div class="kel"><label>ID TRANSAKSI KELUAR ASAL'+(F.aturan.idAsal==='WAJIB'?' *':'')+'</label>' +
+         '<input id="fIdAsal" placeholder="contoh: KLR-260913-001" value="'+aman(F.idAsal)+'"></div>';
+  }
+  h += '</div>';
+  h += '<p class="catatan" style="margin-top:-4px">Tanggal boleh mundur paling lama '+U.hariMundur+' hari.' +
+       (F.aturan.idAsal!=='TIDAK DIPAKAI' ? ' ID transaksi asal dapat disalin dari menu Riwayat.' : '') + '</p>';
+  if(F.aturan.keterangan !== 'TIDAK DIPAKAI'){
+    var lbl = (F.jenis==='RUSAK/HILANG') ? 'KRONOLOGI' :
+              (F.jenis==='PINDAH') ? 'ALASAN PEMINDAHAN' : 'KEPERLUAN / DISERAHKAN KEPADA';
+    h += '<div class="kel" style="margin-top:14px"><label>'+lbl+(F.aturan.keterangan==='WAJIB'?' *':'')+
+         '</label><textarea id="fKeterangan">'+aman(F.keterangan)+'</textarea></div>';
+  }
+  el('isiLangkah').innerHTML = h + tombolNav('Lanjut','simpanRincian()');
+}
+function simpanRincian(){
+  F.tanggal = el('fTanggal').value;
+  if(!F.tanggal){ alert('Tanggal harus diisi.'); return; }
+  if(el('fTujuan')) F.bagianTujuan = el('fTujuan').value;
+  if(el('fIdAsal')) F.idAsal = el('fIdAsal').value.trim();
+  if(el('fKeterangan')) F.keterangan = el('fKeterangan').value.trim();
+  if(F.aturan.bagianTujuan==='WAJIB' && !F.bagianTujuan){ alert('Bagian tujuan wajib dipilih.'); return; }
+  if(F.aturan.idAsal==='WAJIB' && !F.idAsal){ alert('ID transaksi asal wajib diisi.'); return; }
+  if(F.aturan.keterangan==='WAJIB' && !F.keterangan){ alert('Keterangan wajib diisi.'); return; }
+  maju();
+}
+
+function lBarang(){
+  el('isiLangkah').innerHTML =
+    '<div class="grid g-2" style="gap:18px">' +
+      '<div><div class="kel"><label>CARI BARANG</label>' +
+        '<input id="cari" placeholder="ketik nama barang..." oninput="gambarPilihanBarang()"></div>' +
+        '<div class="daftar-cari" id="hasilCari"></div></div>' +
+      '<div><label>KERANJANG (<span id="jmlKeranjang">0</span> barang)</label>' +
+        '<div id="keranjang"></div></div>' +
+    '</div>' + tombolNav('Lanjut','ceKeranjang()');
+  gambarPilihanBarang(); gambarKeranjang();
+}
+function gambarPilihanBarang(){
+  var q = (el('cari') ? el('cari').value : '').toLowerCase();
+  var ada = {}; F.items.forEach(function(i){ ada[i.kode]=true; });
+  var d = F.daftar.filter(function(b){
+    return !ada[b.kode] && (!q || b.nama.toLowerCase().indexOf(q)>=0 || b.kode.toLowerCase().indexOf(q)>=0);
+  }).slice(0,40);
+  if(!d.length){
+    el('hasilCari').innerHTML = kosong(F.jenis==='MASUK'
+      ? 'Tidak ada barang yang cocok.' : 'Tidak ada barang bersisa yang cocok di bagian ini.');
+    return;
+  }
+  el('hasilCari').innerHTML = d.map(function(b){
+    var ket = b.satuan + ' \u00b7 ' + rp(b.harga);
+    if(F.jenis==='MASUK' && F.pakaiPP){ ket += b.pp ? ' \u00b7 PP bulan ini: '+ang(b.pp) : ' \u00b7 tidak ada di PP bulan ini'; }
+    else if(F.jenis!=='PENGEMBALIAN'){ ket += ' \u00b7 sisa '+ang(b.sisa); }
+    if(b.kedaluwarsa) ket += ' \u00b7 KEDALUWARSA '+b.masaBerlaku;
+    return '<button class="pilih" onclick="tambahItem(\''+b.kode+'\')"><span class="lambang">'+
+      ikon('kotak')+'</span><span class="tx">'+aman(b.nama)+'<small>'+aman(ket)+'</small></span></button>';
+  }).join('');
+}
+function tambahItem(kode){
+  var b = null;
+  for(var i=0;i<F.daftar.length;i++) if(F.daftar[i].kode===kode) b=F.daftar[i];
+  if(!b) return;
+  F.items.push({kode:b.kode, nama:b.nama, satuan:b.satuan, harga:b.harga, sisa:b.sisa, jumlah:1});
+  if(el('cari')) el('cari').value='';
+  gambarPilihanBarang(); gambarKeranjang();
+}
+function ubahJumlah(i, v){ F.items[i].jumlah = Number(v)||0; hitungKeranjang(); }
+function buangItem(i){ F.items.splice(i,1); gambarPilihanBarang(); gambarKeranjang(); }
+function gambarKeranjang(){
+  el('jmlKeranjang').textContent = F.items.length;
+  if(!F.items.length){ el('keranjang').innerHTML = kosong('Belum ada barang. Cari lalu ketuk namanya.'); return; }
+  el('keranjang').innerHTML = F.items.map(function(it,i){
+    var info = it.satuan + ((F.jenis==='MASUK'||F.jenis==='PENGEMBALIAN') ? '' : ' \u00b7 sisa '+ang(it.sisa));
+    return '<div class="item"><div class="nm"><b>'+aman(it.nama)+'</b><span>'+aman(info)+'</span></div>' +
+      '<input type="number" min="1" inputmode="numeric" value="'+it.jumlah+'" onchange="ubahJumlah('+i+',this.value)">' +
+      '<button class="buang" onclick="buangItem('+i+')" title="Hapus">'+ikon('buang',15)+'</button></div>';
+  }).join('') + '<div class="pesan p-abu" id="totalKeranjang" style="margin:10px 0 0"></div>';
+  hitungKeranjang();
+}
+function hitungKeranjang(){
+  var t=0; F.items.forEach(function(i){ t += i.jumlah*i.harga; });
+  if(el('totalKeranjang')) el('totalKeranjang').innerHTML = 'Nilai keranjang: <b>'+rp(t)+'</b>';
+}
+function ceKeranjang(){
+  if(!F.items.length){ alert('Tambahkan minimal satu barang.'); return; }
+  for(var i=0;i<F.items.length;i++){
+    if(!(F.items[i].jumlah>0)){ alert('Jumlah '+F.items[i].nama+' harus lebih dari 0.'); return; }
+    if((F.jenis==='KELUAR'||F.jenis==='RUSAK/HILANG'||F.jenis==='PINDAH') && F.items[i].jumlah > F.items[i].sisa){
+      alert('Sisa '+F.items[i].nama+' tinggal '+F.items[i].sisa+' '+F.items[i].satuan+'.'); return; }
+  }
+  maju();
+}
+
+function perluSuratJalan(){
+  if(F.aturan.suratJalan === 'TIDAK DIPAKAI') return 'TIDAK DIPAKAI';
+  var semuaBebas = F.items.length>0 && F.items.every(function(it){
+    var b=null; for(var i=0;i<F.daftar.length;i++) if(F.daftar[i].kode===it.kode) b=F.daftar[i];
+    return b && F.tanpaSJ.indexOf(b.kategori)>=0;
+  });
+  return semuaBebas ? 'TIDAK DIPAKAI' : F.aturan.suratJalan;
+}
+function lBerkas(){
+  var daftar = [
+    ['fotoBarang','FOTO BARANG','foto', F.aturan.fotoBarang, 'Foto fisik barang saat transaksi'],
+    ['dokumenPP','DOKUMEN PP','dokumen', F.aturan.dokumenPP, 'Foto dokumen PP yang disetor ke Operasional'],
+    ['suratJalan','SURAT JALAN','truk', perluSuratJalan(), 'Foto surat jalan yang menyertai barang']
+  ];
+  var h = '';
+  daftar.forEach(function(d){
+    if(d[3]==='TIDAK DIPAKAI') return;
+    h += '<div class="unggah"><span class="lambang">'+ikon(d[2],20)+'</span><div class="tx">' +
+      '<b>'+d[1]+' '+(d[3]==='WAJIB'
+        ? '<span class="lencana l-merah">WAJIB</span>'
+        : '<span class="lencana l-abu">OPSIONAL</span>')+'</b>' +
+      '<small>'+d[4]+'</small>' +
+      '<input type="file" accept="image/*,application/pdf" capture="environment" multiple ' +
+      'onchange="ambilBerkas(this,\''+d[0]+'\')">' +
+      '<div class="berkas-ok" id="ok_'+d[0]+'"></div></div></div>';
+  });
+  if(!h) h = '<div class="pesan p-abu">Jenis transaksi ini tidak memerlukan berkas.</div>';
+  h += '<p class="catatan">Foto otomatis diperkecil sebelum dikirim supaya tetap bisa terkirim di area bersinyal tipis. Batas '+F.maksMB+' MB per berkas.</p>';
+  el('isiLangkah').innerHTML = h + tombolNav('Lanjut','ceBerkas()');
+  ['fotoBarang','dokumenPP','suratJalan'].forEach(tandaiBerkas);
+}
+function tandaiBerkas(nama){
+  var w = el('ok_'+nama); if(!w) return;
+  var n = F.berkas[nama].length;
+  w.textContent = n ? (n + ' berkas siap dikirim') : '';
+}
+function ambilBerkas(input, nama){
+  F.berkas[nama] = [];
+  var berkas = Array.prototype.slice.call(input.files);
+  if(!berkas.length){ tandaiBerkas(nama); return; }
+  sibuk(true, 'Menyiapkan berkas...');
+  var sisa = berkas.length;
+  berkas.forEach(function(f){
+    siapkanBerkas(f, function(hasil){
+      if(hasil) F.berkas[nama].push(hasil);
+      if(--sisa === 0){ sibuk(false); tandaiBerkas(nama); }
+    });
+  });
+}
+function siapkanBerkas(f, lanjut){
+  if(f.type.indexOf('image/') !== 0){
+    var fr = new FileReader();
+    fr.onload = function(){ lanjut({nama:f.name, mime:f.type, data:fr.result.split(',')[1]}); };
+    fr.onerror = function(){ lanjut(null); };
+    fr.readAsDataURL(f);
+    return;
+  }
+  var baca = new FileReader();
+  baca.onload = function(){
+    var img = new Image();
+    img.onload = function(){
+      var maks = 1600, w = img.width, h = img.height;
+      if(w > maks || h > maks){ var s = maks/Math.max(w,h); w = Math.round(w*s); h = Math.round(h*s); }
+      var c = document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      var url = c.toDataURL('image/jpeg',0.75);
+      lanjut({nama:(f.name||'foto').replace(/\.[^.]+$/,'')+'.jpg', mime:'image/jpeg', data:url.split(',')[1]});
+    };
+    img.onerror = function(){ lanjut({nama:f.name, mime:f.type, data:baca.result.split(',')[1]}); };
+    img.src = baca.result;
+  };
+  baca.onerror = function(){ lanjut(null); };
+  baca.readAsDataURL(f);
+}
+function ceBerkas(){
+  if(F.aturan.fotoBarang==='WAJIB' && !F.berkas.fotoBarang.length){ alert('Foto barang wajib diunggah.'); return; }
+  if(F.aturan.dokumenPP==='WAJIB' && !F.berkas.dokumenPP.length){ alert('Dokumen PP wajib diunggah.'); return; }
+  if(perluSuratJalan()==='WAJIB' && !F.berkas.suratJalan.length){ alert('Surat jalan wajib diunggah.'); return; }
+  maju();
+}
+
+function lRingkas(){
+  var t=0; F.items.forEach(function(i){ t += i.jumlah*i.harga; });
+  var b = [['Bagian',F.bagian],['Jenis',F.jenis],['Tanggal',F.tanggal],
+           ['Diinput oleh', U.nama + ' (' + U.badge + ')']];
+  if(F.bagianTujuan) b.push(['Bagian tujuan',F.bagianTujuan]);
+  if(F.idAsal) b.push(['ID transaksi asal',F.idAsal]);
+  if(F.keterangan) b.push(['Keterangan',F.keterangan]);
+  b.push(['Berkas', ['fotoBarang','dokumenPP','suratJalan'].filter(function(k){return F.berkas[k].length;})
+    .map(function(k){ return ({fotoBarang:'Foto barang',dokumenPP:'Dokumen PP',suratJalan:'Surat jalan'})[k]+
+      ' ('+F.berkas[k].length+')'; }).join(', ') || 'tidak ada']);
+
+  el('isiLangkah').innerHTML =
+    '<div class="grid g-2" style="gap:18px">' +
+      '<div class="gulung"><table>' + b.map(function(x){
+        return '<tr><td style="width:42%;color:var(--abu)">'+aman(x[0])+
+               '</td><td class="tebal">'+aman(x[1])+'</td></tr>'; }).join('') + '</table></div>' +
+      '<div class="gulung"><table><tr><th>BARANG</th><th class="tengah">JUMLAH</th><th class="kanan">NILAI</th></tr>' +
+      F.items.map(function(i){
+        return '<tr><td>'+aman(i.nama)+'</td><td class="tengah tebal">'+ang(i.jumlah)+' '+aman(i.satuan)+
+               '</td><td class="kanan mono">'+rp(i.jumlah*i.harga)+'</td></tr>'; }).join('') +
+      '<tr><td colspan="2" class="tebal">TOTAL</td><td class="kanan tebal mono">'+rp(t)+'</td></tr></table></div>' +
+    '</div>' +
+    '<div class="baris-tbl"><button class="tbl tbl-diam" onclick="mundur()">Kembali</button>' +
+    '<button class="tbl tbl-utama" onclick="kirim()">KIRIM TRANSAKSI</button></div>';
+}
+function kirim(){
+  var muatan = {
+    token:U.token, jenis:F.jenis, bagian:F.bagian, bagianTujuan:F.bagianTujuan,
+    tanggal:F.tanggal, keterangan:F.keterangan, idAsal:F.idAsal,
+    items:F.items.map(function(i){ return {kode:i.kode, jumlah:i.jumlah}; }),
+    berkas:F.berkas
+  };
+  panggil('svrSimpan',[muatan], function(r){
+    if(!r.ok){ alert(r.pesan); return; }
+    var h = '<div class="pesan p-hijau"><b>Transaksi tersimpan.</b><br>Nomor transaksi: <b>'+aman(r.id)+
+            '</b><br>'+r.jumlahItem+' barang \u00b7 '+rp(r.total)+'</div>';
+    if(r.peringatan && r.peringatan.length)
+      h += '<div class="pesan p-kuning"><b>Perhatian:</b><br>' +
+           r.peringatan.map(function(p){ return '\u2022 '+aman(p); }).join('<br>') + '</div>';
+    h += '<div class="baris-tbl"><button class="tbl tbl-diam" onclick="buka(\'beranda\')">Ke Ringkasan</button>' +
+         '<button class="tbl tbl-utama" onclick="mulaiInput()">INPUT LAGI</button></div>';
+    el('halInput').innerHTML = '<div class="kartu" style="max-width:620px"><h3>Selesai</h3>' +
+      '<div class="isi">'+h+'</div></div>';
+  }, 'Mengirim transaksi...');
+}
+</script>
+<script>
+/* ================= SISA STOK ================= */
+function muatStok(){
+  panggil('svrStokSaya',[U.token, null], function(r){
+    if(!r.ok){ el('halStok').innerHTML = kosong(aman(r.pesan)); return; }
+    if(!r.stok.length){ el('halStok').innerHTML =
+      '<div class="kartu"><div class="isi">'+kosong('Belum ada stok tercatat untuk bagian Anda.')+'</div></div>'; return; }
+    var kategori = {};
+    r.stok.forEach(function(s){ kategori[s.kategori] = (kategori[s.kategori]||0) + s.nilai; });
+    el('halStok').innerHTML =
+      '<div class="grid g-ubin">' +
+        '<div class="ubin u-teal"><span class="lambang">'+ikon('uang')+'</span><div><b>'+rp(r.total)+
+          '</b><span>TOTAL NILAI STOK</span></div></div>' +
+        '<div class="ubin u-ungu"><span class="lambang">'+ikon('kotak')+'</span><div><b>'+ang(r.stok.length)+
+          '</b><span>JENIS BARANG</span></div></div>' +
+        '<div class="ubin u-hijau"><span class="lambang">'+ikon('manajer')+'</span><div><b>'+
+          ang(r.bagian.length)+'</b><span>BAGIAN ANDA</span></div></div>' +
+      '</div>' +
+      '<div class="kartu" style="margin-top:16px"><h3>Rincian Sisa Stok' +
+        '<span class="kanan-kecil">'+ang(r.stok.length)+' baris</span></h3>' +
+      '<div class="gulung" style="border:0;border-radius:0"><table>' +
+      '<tr><th>BAGIAN</th><th>BARANG</th><th>KATEGORI</th><th class="tengah">SISA</th><th class="kanan">NILAI</th></tr>' +
+      r.stok.map(function(s){
+        return '<tr><td>'+aman(s.bagian)+'</td><td>'+aman(s.nama)+
+          (s.kedaluwarsa?' <span class="lencana l-merah">KEDALUWARSA</span>':'')+
+          '</td><td><span class="lencana l-teal">'+aman(s.kategori)+'</span>'+
+          '</td><td class="tengah tebal mono">'+ang(s.sisa)+' '+aman(s.satuan)+
+          '</td><td class="kanan mono">'+rp(s.nilai)+'</td></tr>'; }).join('') +
+      '</table></div></div>';
+  }, 'Menghitung sisa stok...');
+}
+
+/* ================= RIWAYAT ================= */
+function muatRiwayat(){
+  panggil('svrRiwayat',[U.token,{}], function(r){
+    if(!r.ok){ el('halRiwayat').innerHTML = kosong(aman(r.pesan)); return; }
+    el('halRiwayat').innerHTML = '<div class="kartu"><h3>Riwayat Transaksi' +
+      '<span class="kanan-kecil">'+ang(r.transaksi.length)+' transaksi terakhir</span></h3>' +
+      (r.transaksi.length ? tabelTransaksi(r.transaksi, false, U.peran!=='PENGAWAS')
+                          : '<div class="isi">'+kosong('Belum ada transaksi.')+'</div>') + '</div>';
+  }, 'Mengambil riwayat...');
+}
+function tautanBerkas(t){
+  var k = [];
+  if(t.fotoBarang) k.push('<a href="'+t.fotoBarang.split(' , ')[0]+'" target="_blank">Foto</a>');
+  if(t.dokumenPP) k.push('<a href="'+t.dokumenPP.split(' , ')[0]+'" target="_blank">PP</a>');
+  if(t.suratJalan) k.push('<a href="'+t.suratJalan.split(' , ')[0]+'" target="_blank">SJ</a>');
+  return k.join(' \u00b7 ') || '<span style="color:var(--abu-2)">-</span>';
+}
+function tabelTransaksi(daftar, bolehBatal, tampilPengawas){
+  if(!daftar.length) return '<div class="isi">'+kosong('Belum ada transaksi.')+'</div>';
+  return '<div class="gulung" style="border:0;border-radius:0"><table>' +
+    '<tr><th>ID</th><th>TANGGAL</th><th>JENIS</th><th>BAGIAN</th>' +
+    (tampilPengawas?'<th>DIINPUT OLEH</th>':'') +
+    '<th class="tengah">ITEM</th><th class="kanan">NILAI</th><th>BERKAS</th><th>STATUS</th>' +
+    (bolehBatal?'<th></th>':'') + '</tr>' +
+    daftar.map(function(t){
+      return '<tr><td class="tebal mono" style="white-space:nowrap"><a href="#" onclick="lihatIsi(\''+t.id+
+        '\');return false;">'+aman(t.id)+'</a></td><td class="mono">'+aman(t.tanggal)+
+        '</td><td>'+lencanaJenis(t.jenis)+'</td><td>'+aman(t.bagian)+
+        (t.bagianTujuan?' &rarr; '+aman(t.bagianTujuan):'')+'</td>' +
+        (tampilPengawas ? '<td><b>'+aman(t.pengawas)+'</b><div class="catatan mono">'+
+          aman(t.badge)+'</div></td>' : '') +
+        '<td class="tengah">'+ang(t.jumlahItem)+'</td><td class="kanan mono">'+rp(t.total)+
+        '</td><td style="white-space:nowrap">'+tautanBerkas(t)+
+        '</td><td><span class="lencana '+(t.status==='DIBATALKAN'?'l-merah':'l-hijau')+'">'+aman(t.status)+'</span>'+
+        (t.alasanBatal?'<div class="catatan">'+aman(t.alasanBatal)+'</div>':'')+'</td>' +
+        (bolehBatal ? '<td>'+(t.status==='SAH'
+          ? '<button class="tbl tbl-diam tbl-kecil" onclick="batalkan(\''+t.id+'\')">Batalkan</button>' : '')+'</td>' : '') +
+        '</tr>'; }).join('') + '</table></div>';
+}
+function lihatIsi(id){
+  panggil('svrIsiTransaksi',[U.token, id], function(r){
+    if(!r.ok || !r.isi.length){ alert('Rincian tidak ditemukan.'); return; }
+    alert('Isi transaksi ' + id + ':\n\n' + r.isi.map(function(x){
+      return '\u2022 ' + x.nama + '  \u2014  ' + x.jumlah + ' ' + x.satuan +
+             (x.jenis.indexOf('PINDAH')===0 ? '  (' + x.jenis + ' \u2192 ' + x.bagian + ')' : '');
+    }).join('\n'));
+  }, 'Mengambil rincian...');
+}
+</script>
+<script>
+/* ================= HALAMAN MANAJER ================= */
+function muatManajerAwal(){ muatManajer(dataManajer ? (dataManajer.filter||{}) : {}); }
+
+function muatManajer(filter){
+  panggil('svrManajer',[U.token, filter||{}], function(r){
+    if(!r.ok){ el('halManajer').innerHTML = kosong(aman(r.pesan)); return; }
+    dataManajer = r; dataManajer.filter = filter||{};
+    var a = r.ringkasan;
+    el('halManajer').innerHTML =
+      '<div class="grid g-ubin">' +
+        '<div class="ubin u-teal"><span class="lambang">'+ikon('uang')+'</span><div><b>'+rp(a.nilaiStok)+
+          '</b><span>NILAI STOK</span></div></div>' +
+        '<div class="ubin u-hijau"><span class="lambang">'+ikon('riwayat')+'</span><div><b>'+
+          ang(a.jumlahTransaksi)+'</b><span>TRANSAKSI SAH</span></div></div>' +
+        '<div class="ubin u-ungu"><span class="lambang">'+ikon('kotak')+'</span><div><b>'+
+          ang(a.jumlahBarang)+'</b><span>BARANG BERSISA</span></div></div>' +
+        '<div class="ubin '+(a.kuponKedaluwarsa?'u-merah':'u-kuning')+'"><span class="lambang">'+ikon('rusak')+
+          '</span><div><b>'+ang(a.kuponKedaluwarsa)+'</b><span>KUPON KEDALUWARSA</span></div></div>' +
+      '</div>' +
+      '<div class="tab" id="tabManajer" style="margin-top:16px"></div>' +
+      '<div class="kartu"><div class="isi" id="isiManajer"></div></div>';
+    var tabs = [['stok','Stok'],['bagian','Per Bagian']];
+    if(r.pakaiPP) tabs.push(['pp','Realisasi PP']);
+    tabs = tabs.concat([['anggaran','Anggaran'],['kartu','Kartu Stok'],
+                        ['trx','Transaksi'],['rekap','Rekap Pengawas']]);
+    if(!r.pakaiPP && tabAktif==='pp') tabAktif = 'stok';
+    if(U.peran==='ADMIN') tabs.push(['pengguna','Pengguna']);
+    el('tabManajer').innerHTML = tabs.map(function(t){
+      return '<button class="'+(t[0]===tabAktif?'aktif':'')+'" onclick="tabManajer(\''+t[0]+
+             '\',this)">'+t[1]+'</button>'; }).join('');
+    gambarTabManajer();
+  }, 'Menyiapkan halaman manajer...');
+}
+function tabManajer(nama, tbl){
+  tabAktif = nama;
+  Array.prototype.forEach.call(el('tabManajer').children, function(b){ b.classList.remove('aktif'); });
+  if(tbl) tbl.classList.add('aktif');
+  gambarTabManajer();
+}
+function penyaring(pakaiPengawas){
+  var f = dataManajer.filter || {};
+  return '<div class="baris-isian" style="margin-bottom:16px;align-items:end">' +
+    '<div><label>BAGIAN</label><select id="fmBagian"><option value="">(semua)</option>' +
+      dataManajer.bagian.map(function(b){ return '<option'+(f.bagian===b?' selected':'')+'>'+aman(b)+'</option>'; }).join('') +
+    '</select></div>' +
+    (pakaiPengawas
+      ? '<div><label>PENGAWAS</label><select id="fmBadge"><option value="">(semua)</option>' +
+        (dataManajer.pengawas||[]).map(function(o){
+          return '<option value="'+aman(o.badge)+'"'+(f.badge===o.badge?' selected':'')+'>'+
+                 aman(o.nama)+' ('+aman(o.badge)+')</option>'; }).join('') + '</select></div>'
+      : '<div><label>KATEGORI</label><select id="fmKategori"><option value="">(semua)</option>' +
+        dataManajer.kategori.map(function(b){ return '<option'+(f.kategori===b?' selected':'')+'>'+aman(b)+'</option>'; }).join('') +
+        '</select></div>') +
+    '<div><label>BULAN</label><input id="fmBulan" placeholder="2026-09" value="'+aman(f.bulan||'')+'"></div>' +
+    '<div><button class="tbl tbl-utama tbl-lebar" onclick="terapkanSaring()">Terapkan</button></div>' +
+    '</div>';
+}
+function terapkanSaring(){
+  var f = dataManajer.filter || {};
+  muatManajer({
+    bagian  : el('fmBagian') ? el('fmBagian').value : f.bagian,
+    kategori: el('fmKategori') ? el('fmKategori').value : (el('fmBadge') ? '' : f.kategori),
+    badge   : el('fmBadge') ? el('fmBadge').value : (el('fmKategori') ? '' : f.badge),
+    bulan   : el('fmBulan') ? el('fmBulan').value.trim() : f.bulan
+  });
+}
+function gambarTabManajer(){
+  var d = dataManajer, h = '';
+  if(tabAktif==='stok'){
+    h = penyaring() + (d.stok.length ?
+      '<div class="gulung"><table><tr><th>BAGIAN</th><th>BARANG</th><th>KATEGORI</th>' +
+      '<th class="tengah">SISA</th><th class="kanan">NILAI</th></tr>' +
+      d.stok.map(function(s){
+        return '<tr><td>'+aman(s.bagian)+'</td><td>'+aman(s.nama)+'</td><td>'+
+          '<span class="lencana l-teal">'+aman(s.kategori)+'</span></td><td class="tengah tebal mono">'+
+          ang(s.sisa)+' '+aman(s.satuan)+'</td><td class="kanan mono">'+rp(s.nilai)+'</td></tr>'; }).join('') +
+      '</table></div>' : kosong('Tidak ada stok yang cocok dengan penyaring.'));
+  }
+  else if(tabAktif==='bagian'){
+    var maks = Math.max.apply(null, d.perBagian.map(function(x){return x.nilai;}).concat([1]));
+    h = '<div class="gulung"><table><tr><th>BAGIAN</th><th class="kanan">NILAI STOK</th>' +
+      '<th style="width:42%">PORSI</th></tr>' +
+      d.perBagian.map(function(x){
+        var p = Math.round(x.nilai/maks*100);
+        return '<tr><td>'+aman(x.bagian)+'</td><td class="kanan tebal mono">'+rp(x.nilai)+'</td>' +
+          '<td><div class="bilah"><i style="width:'+p+'%"></i></div></td></tr>'; }).join('') +
+      '</table></div>';
+  }
+  else if(tabAktif==='pp'){
+    h = penyaring() + (d.realisasiPP.length ?
+      '<div class="gulung"><table><tr><th>BULAN</th><th>BAGIAN</th><th>BARANG</th>' +
+      '<th class="tengah">PP</th><th class="tengah">DATANG</th><th class="tengah">SELISIH</th><th>STATUS</th></tr>' +
+      d.realisasiPP.map(function(x){
+        var lb = x.status==='LENGKAP'?'l-hijau':(x.status==='BELUM DATANG'?'l-merah':
+                 (x.status==='SEBAGIAN'?'l-kuning':'l-abu'));
+        return '<tr><td class="mono">'+aman(x.bulan)+'</td><td>'+aman(x.bagian)+'</td><td>'+aman(x.nama)+
+          '</td><td class="tengah mono">'+ang(x.jumlahPP)+'</td><td class="tengah tebal mono">'+ang(x.datang)+
+          '</td><td class="tengah mono">'+ang(x.selisih)+'</td><td><span class="lencana '+lb+'">'+
+          aman(x.status)+'</span></td></tr>'; }).join('') + '</table></div>' :
+      kosong('Belum ada baris PP. Isi sheet DATA PP lebih dulu.'));
+  }
+  else if(tabAktif==='anggaran'){
+    h = penyaring();
+    if(!(d.filter && d.filter.bulan)){
+      h += '<div class="pesan p-kuning">Isi kolom <b>BULAN</b> di atas (contoh 2026-09) lalu tekan Terapkan \u2014 anggaran selalu dihitung per bulan.</div>';
+    } else if(!d.anggaran.length){
+      h += kosong('Tidak ada bagian yang cocok dengan penyaring.');
+    } else {
+      var totA=0,totP=0;
+      d.anggaran.forEach(function(x){ totA+=x.anggaran; totP+=x.terpakai; });
+      h += '<div class="grid g-ubin" style="margin-bottom:16px">' +
+        '<div class="ubin u-ungu"><span class="lambang">'+ikon('uang')+'</span><div><b>'+rp(totA)+
+          '</b><span>TOTAL ANGGARAN '+aman(d.filter.bulan)+'</span></div></div>' +
+        '<div class="ubin u-teal"><span class="lambang">'+ikon('masuk2')+'</span><div><b>'+rp(totP)+
+          '</b><span>NILAI BARANG MASUK</span></div></div>' +
+        '<div class="ubin '+((totA-totP)<0?'u-merah':'u-hijau')+'"><span class="lambang">'+ikon('kotak')+
+          '</span><div><b>'+rp(totA-totP)+'</b><span>SISA ANGGARAN</span></div></div>' +
+      '</div>' +
+      '<div class="gulung"><table><tr><th>BAGIAN</th><th class="kanan">ANGGARAN</th>' +
+      '<th class="kanan">NILAI MASUK</th><th class="kanan">SISA</th><th style="width:24%">TERPAKAI</th></tr>' +
+      d.anggaran.map(function(x){
+        var p = x.persen===null ? null : Math.round(x.persen*100);
+        var warna = x.sisa<0 ? 'var(--merah)' : (p!==null && p>=90 ? 'var(--kuning)' : 'var(--teal)');
+        return '<tr><td>'+aman(x.bagian)+'</td><td class="kanan mono">'+rp(x.anggaran)+
+          '</td><td class="kanan mono">'+rp(x.terpakai)+
+          '</td><td class="kanan tebal mono" style="color:'+(x.sisa<0?'var(--merah)':'var(--hijau)')+'">'+rp(x.sisa)+
+          '</td><td>'+(p===null
+             ? '<span class="lencana l-abu">anggaran belum diisi</span>'
+             : '<div class="bilah"><i style="width:'+Math.min(p,100)+'%;background:'+warna+'"></i></div>' +
+               '<div class="catatan">'+p+'% terpakai</div>')+'</td></tr>'; }).join('') + '</table></div>';
+    }
+  }
+  else if(tabAktif==='kartu'){
+    h = '<div class="baris-isian" style="margin-bottom:16px">' +
+        '<div><label>PILIH BARANG</label><select id="kartuKode" onchange="muatKartu()">' +
+        '<option value="">- pilih barang -</option></select></div>' +
+        '<div><label>BAGIAN</label><select id="kartuBagian" onchange="muatKartu()">' +
+        '<option value="">(semua bagian)</option>' +
+        d.bagian.map(function(b){ return '<option>'+aman(b)+'</option>'; }).join('') + '</select></div>' +
+        '</div><div id="isiKartu">'+kosong('Pilih barang untuk melihat kartu stoknya.')+'</div>';
+  }
+  else if(tabAktif==='trx'){ h = '<div id="isiTrx">'+kosong('Memuat transaksi...')+'</div>'; }
+  else if(tabAktif==='rekap'){ h = '<div id="isiRekap">'+kosong('Menghitung rekap...')+'</div>'; }
+  else if(tabAktif==='pengguna'){ h = '<div id="isiPengguna">'+kosong('Memuat daftar pengguna...')+'</div>'; }
+  el('isiManajer').innerHTML = h;
+
+  if(tabAktif==='kartu'){
+    panggil('svrDaftarBarangSemua',[U.token], function(r){
+      if(!r.ok) return;
+      el('kartuKode').innerHTML = '<option value="">- pilih barang -</option>' +
+        r.barang.map(function(b){ return '<option value="'+b.kode+'">'+aman(b.nama)+'</option>'; }).join('');
+    }, 'Mengambil daftar barang...');
+  }
+  if(tabAktif==='trx'){
+    panggil('svrRiwayat',[U.token, dataManajer.filter||{}], function(r){
+      if(!r.ok) return;
+      el('isiTrx').innerHTML = penyaring(true) + tabelTransaksi(r.transaksi, U.peran==='ADMIN', true);
+    }, 'Mengambil transaksi...');
+  }
+  if(tabAktif==='rekap'){
+    panggil('svrRekapPengawas',[U.token, dataManajer.filter||{}], function(r){
+      if(!r.ok){ el('isiRekap').innerHTML = kosong(aman(r.pesan)); return; }
+      el('isiRekap').innerHTML = penyaring(true) +
+        '<div class="pesan p-abu">Nama pengawas tidak diketik \u2014 diambil sendiri dari nomor badge ' +
+        'yang dipakai masuk, jadi tiap transaksi selalu punya penanggung jawab yang pasti.</div>' +
+        (r.rekap.length ?
+        '<div class="gulung"><table><tr><th>PENGAWAS</th><th>BADGE</th><th>BAGIAN</th>' +
+        '<th class="tengah">TRANSAKSI</th><th class="kanan">NILAI MASUK</th><th class="kanan">NILAI KELUAR</th>' +
+        '<th class="kanan">RUSAK/HILANG</th><th>INPUT TERAKHIR</th><th></th></tr>' +
+        r.rekap.map(function(x){
+          return '<tr><td class="tebal">'+aman(x.nama)+
+            (x.aktif?'':' <span class="lencana l-merah">NONAKTIF</span>')+
+            '</td><td class="mono">'+aman(x.badge)+'</td><td>'+aman(x.bagian||'-')+
+            '</td><td class="tengah tebal mono">'+ang(x.jumlahTrx)+
+            '</td><td class="kanan mono">'+rp(x.masuk)+'</td><td class="kanan mono">'+rp(x.keluar)+
+            '</td><td class="kanan mono" style="color:'+(x.rusak?'var(--merah)':'var(--abu-2)')+'">'+
+            rp(x.rusak)+'</td><td class="mono">'+(x.terakhir||'<span style="color:var(--abu-2)">belum pernah</span>')+
+            '</td><td><button class="tbl tbl-diam tbl-kecil" onclick="lihatTransaksiPengawas(\''+
+            aman(x.badge)+'\')">Lihat transaksi</button></td></tr>'; }).join('') +
+        '</table></div>' : kosong('Belum ada pengawas terdaftar.'));
+    }, 'Menghitung rekap pengawas...');
+  }
+  if(tabAktif==='pengguna'){
+    panggil('svrDaftarPengawas',[U.token], function(r){
+      if(!r.ok){ el('isiPengguna').innerHTML = kosong(aman(r.pesan)); return; }
+      el('isiPengguna').innerHTML =
+        '<div class="pesan p-abu">Nonaktifkan pengawas yang resign lewat kolom AKTIF di sheet DATA PENGAWAS. ' +
+        'Di sini Anda hanya mengatur ulang PIN yang lupa.</div>' +
+        '<div class="gulung"><table><tr><th>BADGE</th><th>NAMA</th><th>PERAN</th><th>BAGIAN</th>' +
+        '<th>AKTIF</th><th></th></tr>' +
+        r.orang.map(function(o){
+          return '<tr><td class="tebal mono">'+aman(o.badge)+'</td><td>'+aman(o.nama)+
+            '</td><td><span class="lencana l-teal">'+aman(o.peran)+'</span></td><td>'+aman(o.bagian||'-')+
+            '</td><td><span class="lencana '+(o.aktif?'l-hijau':'l-merah')+'">'+(o.aktif?'AKTIF':'TIDAK')+
+            '</span></td><td><button class="tbl tbl-diam tbl-kecil" onclick="resetPin(\''+o.badge+
+            '\')">Reset PIN</button></td></tr>'; }).join('') + '</table></div>';
+    }, 'Mengambil daftar pengguna...');
+  }
+}
+function lihatTransaksiPengawas(badge){
+  var f = dataManajer.filter || {};
+  tabAktif = 'trx';
+  muatManajer({ bagian:f.bagian||'', kategori:'', badge:badge, bulan:f.bulan||'' });
+}
+function muatKartu(){
+  var kode = el('kartuKode').value, bagian = el('kartuBagian').value;
+  if(!kode){ el('isiKartu').innerHTML = kosong('Pilih barang untuk melihat kartu stoknya.'); return; }
+  panggil('svrKartuStok',[U.token, kode, bagian], function(r){
+    if(!r.ok){ el('isiKartu').innerHTML = kosong(aman(r.pesan)); return; }
+    if(!r.baris.length){ el('isiKartu').innerHTML = kosong('Belum ada pergerakan untuk barang ini.'); return; }
+    el('isiKartu').innerHTML =
+      '<div class="pesan p-abu"><b>'+aman(r.barang.nama)+'</b> \u00b7 sisa saat ini <b>'+
+      ang(r.saldo)+' '+aman(r.barang.satuan)+'</b></div>' +
+      '<div class="gulung"><table><tr><th>TANGGAL</th><th>ID</th><th>JENIS</th><th>BAGIAN</th>' +
+      '<th class="tengah">MASUK</th><th class="tengah">KELUAR</th><th class="tengah">SALDO</th><th>PENGAWAS</th></tr>' +
+      r.baris.map(function(b){
+        return '<tr><td class="mono">'+aman(b.tanggal)+'</td><td class="mono" style="white-space:nowrap">'+
+          aman(b.id)+'</td><td>'+lencanaJenis(b.jenis)+'</td><td>'+aman(b.bagian)+
+          '</td><td class="tengah mono" style="color:var(--hijau)">'+(b.masuk?ang(b.masuk):'')+
+          '</td><td class="tengah mono" style="color:var(--merah)">'+(b.keluar?ang(b.keluar):'')+
+          '</td><td class="tengah tebal mono">'+ang(b.saldo)+'</td><td>'+aman(b.pengawas)+'</td></tr>';
+      }).join('') + '</table></div>';
+  }, 'Menyusun kartu stok...');
+}
+function resetPin(badge){
+  var pin = prompt('PIN sementara untuk ' + badge + ' (angka saja):');
+  if(pin === null) return;
+  panggil('svrResetPin',[U.token, badge, pin.trim()], function(r){
+    alert(r.pesan + (r.ok ? '\n\nMinta yang bersangkutan segera mengganti PIN lewat menu Ganti PIN.' : ''));
+  }, 'Mengatur ulang PIN...');
+}
+function batalkan(id){
+  var alasan = prompt('Alasan pembatalan transaksi ' + id + ':');
+  if(alasan === null) return;
+  if(!alasan.trim()){ alert('Alasan wajib diisi.'); return; }
+  panggil('svrBatal',[U.token, id, alasan.trim()], function(r){
+    alert(r.pesan);
+    if(r.ok) muatManajer(dataManajer.filter||{});
+  }, 'Membatalkan transaksi...');
+}
+</script>
+
+<script>
+/* ============================================================
+   Penghubung ke Apps Script.
+   Halaman ini berjalan di luar Google, jadi google.script.run
+   tidak tersedia. Blok ini menirukannya lewat permintaan HTTP
+   biasa sehingga seluruh kode aplikasi di atas tidak berubah.
+   ============================================================ */
+(function(){
+  var DAFTAR = ['svrBarangUntuk', 'svrBatal', 'svrDaftarBarangSemua', 'svrDaftarPengawas', 'svrGantiPin', 'svrIsiTransaksi', 'svrKartuStok', 'svrManajer', 'svrMasuk', 'svrRekapPengawas', 'svrResetPin', 'svrRiwayat', 'svrSimpan', 'svrStokSaya'];
+
+  function kirim(nama, args, sukses, gagal){
+    if(!ALAMAT_API || ALAMAT_API.indexOf('script.google.com') < 0){
+      if(gagal) gagal(new Error(
+        'Alamat aplikasi belum diisi. Buka berkas index.html, ganti baris ALAMAT_API ' +
+        'dengan alamat Web App Apps Script yang berakhiran /exec.'));
+      return;
+    }
+    fetch(ALAMAT_API, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ fungsi: nama, args: args })
+    })
+    .then(function(r){
+      if(!r.ok) throw new Error('Server menjawab kode ' + r.status);
+      return r.text();
+    })
+    .then(function(t){
+      var j;
+      try { j = JSON.parse(t); }
+      catch(e){ throw new Error('Jawaban server tidak terbaca. Pastikan Web App di-deploy dengan ' +
+        'Execute as = Me dan Who has access = Anyone.'); }
+      if(j && j.__galat){ if(gagal) gagal(new Error(j.pesan)); return; }
+      if(sukses) sukses(j);
+    })
+    .catch(function(e){ if(gagal) gagal(e); });
+  }
+
+  function rantai(){
+    var sukses = null, gagal = null;
+    var r = {
+      withSuccessHandler: function(f){ sukses = f; return r; },
+      withFailureHandler: function(f){ gagal = f; return r; }
+    };
+    DAFTAR.forEach(function(n){
+      r[n] = function(){ kirim(n, Array.prototype.slice.call(arguments), sukses, gagal); };
+    });
+    return r;
+  }
+
+  window.google = { script: { run: {
+    withSuccessHandler: function(f){ return rantai().withSuccessHandler(f); },
+    withFailureHandler: function(f){ return rantai().withFailureHandler(f); }
+  } } };
+})();
+</script>
+</body>
+</html>
