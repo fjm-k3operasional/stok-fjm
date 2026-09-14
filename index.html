@@ -12,13 +12,10 @@
 <meta name="apple-mobile-web-app-title" content="Stok FJM">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<!-- ============================================================
-     ALAMAT APLIKASI  -  ganti baris di bawah dengan alamat Web App
-     Apps Script Anda (yang berakhiran /exec), lalu simpan.
-     ============================================================ -->
-<script>
-var ALAMAT_API = 'https://script.google.com/macros/s/AKfycbzDBdb5aWvssOtyN4TNHCEhHBjImV2gf43dP7QgJE0dNcyF4--_LabBof0AMSWUc8plBg/exec';
-</script>
+<!-- Alamat server dibaca dari berkas alamat.js.
+     Berkas itu dibuat SEKALI dan tidak pernah ikut tertimpa
+     saat index.html diperbarui. -->
+<script src="alamat.js"></script>
 
 <style>
 :root{
@@ -342,6 +339,7 @@ tbody tr:hover td{background:#fbfdfe}
 <body>
 
 <div id="tirai" class="sembunyi"><div><span class="putar"></span><span id="tiraiTeks">Memuat...</span></div></div>
+<div id="luring" class="sembunyi">Tidak ada internet \u2014 kiriman data akan gagal sampai sinyal kembali</div>
 
 <!-- ============ MASUK ============ -->
 <section id="layarMasuk">
@@ -514,13 +512,32 @@ function panggil(fungsi, args, lanjut, teksSibuk){
     .withSuccessHandler(function(r){ sibuk(false); lanjut(r); })
     .withFailureHandler(function(e){
       sibuk(false);
-      alert('Gagal terhubung: ' + (e && e.message ? e.message : e) + '\n\nPeriksa sinyal lalu coba lagi.');
+      var pesan = (e && e.message) ? e.message : String(e);
+      var jaringan = /failed to fetch|networkerror|load failed|menjawab kode|timed out/i.test(pesan);
+      if(jaringan || navigator.onLine === false){
+        alert('Tidak bisa terhubung ke server.\n\n' +
+              (navigator.onLine === false
+                 ? 'Perangkat ini sedang tidak tersambung internet.'
+                 : pesan) +
+              '\n\nData tetap aman. Coba lagi setelah sinyal kembali.');
+      } else {
+        alert(pesan);
+      }
     })[fungsi].apply(null, args);
 }
 function inisial(nama){
   var p = String(nama||'').trim().split(/\s+/);
   return ((p[0]||'?')[0] + (p.length>1 ? p[p.length-1][0] : '')).toUpperCase();
 }
+
+/* ================= PENANDA LURING ================= */
+function periksaSambungan(){
+  var b = el('luring');
+  if(b) b.classList.toggle('sembunyi', navigator.onLine !== false);
+}
+window.addEventListener('online', periksaSambungan);
+window.addEventListener('offline', periksaSambungan);
+periksaSambungan();
 
 /* ================= NAVIGASI ================= */
 function daftarHalaman(){
@@ -1354,10 +1371,11 @@ function batalkan(id){
   var DAFTAR = ['svrBarangUntuk', 'svrBatal', 'svrDaftarBarangSemua', 'svrDaftarPengawas', 'svrGantiPin', 'svrIsiTransaksi', 'svrKartuStok', 'svrManajer', 'svrMasuk', 'svrRekapPengawas', 'svrResetPin', 'svrRiwayat', 'svrSimpan', 'svrStokSaya'];
 
   function kirim(nama, args, sukses, gagal){
-    if(!ALAMAT_API || ALAMAT_API.indexOf('script.google.com') < 0){
+    if(typeof ALAMAT_API === 'undefined' || !ALAMAT_API ||
+       ALAMAT_API.indexOf('script.google.com') < 0){
       if(gagal) gagal(new Error(
-        'Alamat aplikasi belum diisi. Buka berkas index.html, ganti baris ALAMAT_API ' +
-        'dengan alamat Web App Apps Script yang berakhiran /exec.'));
+        'Alamat server belum diatur.\n\nBuka repositori GitHub, buka berkas alamat.js, ' +
+        'lalu isi dengan alamat Web App Apps Script yang berakhiran /exec.'));
       return;
     }
     fetch(ALAMAT_API, {
