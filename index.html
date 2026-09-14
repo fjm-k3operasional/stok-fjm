@@ -42,7 +42,7 @@ a{color:var(--teal-t);text-decoration:none}
 a:hover{text-decoration:underline}
 
 /* ================= LAYAR MASUK ================= */
-#layarMasuk{position:fixed;inset:0;display:grid;grid-template-columns:1.1fr 1fr;z-index:50}
+#layarMasuk{position:fixed;inset:var(--bilah,0) 0 0 0;display:grid;grid-template-columns:1.1fr 1fr;z-index:50}
 .masuk-kiri{background:linear-gradient(150deg,#0f172a 0%,#134e4a 55%,#0d9488 130%);
   color:#fff;padding:52px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
 .masuk-kiri::after{content:"";position:absolute;right:-140px;bottom:-160px;width:420px;height:420px;
@@ -83,11 +83,11 @@ a:hover{text-decoration:underline}
 }
 
 /* ================= KERANGKA APLIKASI ================= */
-.apl{display:grid;grid-template-columns:var(--sisi) 1fr;min-height:100vh}
+.apl{display:grid;grid-template-columns:var(--sisi) 1fr;min-height:100vh;padding-top:var(--bilah,0)}
 
 /* ---- sisi kiri ---- */
 .sisi{background:var(--tinta);color:#cbd5e1;display:flex;flex-direction:column;
-  position:fixed;inset:0 auto 0 0;width:var(--sisi);z-index:30}
+  position:fixed;inset:var(--bilah,0) auto 0 0;width:var(--sisi);z-index:30}
 .sisi-merek{display:flex;align-items:center;gap:11px;padding:16px 18px;overflow:hidden;
   border-bottom:1px solid rgba(255,255,255,.07)}
 /* Logo dibiarkan memakai lebar penuh kepala menu. Tulisan STOK OPERASIONAL
@@ -126,7 +126,7 @@ a:hover{text-decoration:underline}
 /* ---- kolom utama ---- */
 .utama{grid-column:2;display:flex;flex-direction:column;min-width:0;overflow-x:hidden}
 .atas{min-height:var(--atas);background:var(--kertas);border-bottom:1px solid var(--garis);
-  display:flex;align-items:center;gap:12px;padding:0 22px;position:sticky;top:0;z-index:20}
+  display:flex;align-items:center;gap:12px;padding:0 22px;position:sticky;top:var(--bilah,0);z-index:20}
 .atas .tbl-panel{display:none;background:var(--abu-t);border:0;width:36px;height:36px;
   border-radius:8px;cursor:pointer;place-items:center;color:var(--tinta)}
 .atas .judul{flex:1;min-width:0}
@@ -359,6 +359,21 @@ tbody tr:hover td{background:#fbfdfe}
 .kosong svg{margin:0 auto 10px;color:var(--garis-2)}
 .catatan{font-size:11.5px;color:var(--abu);margin-top:6px;line-height:1.5}
 .daftar-cari{max-height:330px;overflow:auto;padding-right:2px}
+/* ---- bilah pemberitahuan di puncak layar ----
+   #luring  : perangkat sedang tidak tersambung internet
+   #gangguan: server tidak menjawab walau sudah dicoba ulang     */
+#luring,#gangguan{position:fixed;left:0;right:0;top:0;z-index:98;padding:9px 16px;
+  font-size:12.5px;font-weight:600;text-align:center;line-height:1.5}
+#luring{background:#fef3c7;color:#92400e;border-bottom:1px solid #fcd34d}
+#gangguan{background:#fee2e2;color:#991b1b;border-bottom:1px solid #fca5a5;
+  display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+#gangguan button{background:#991b1b;color:#fff;border:0;border-radius:7px;
+  padding:6px 14px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;flex:none}
+#gangguan button:hover{background:#7f1d1d}
+#gangguan .tutup{background:transparent;color:#991b1b;text-decoration:underline;padding:6px 4px}
+#gangguan .tutup:hover{background:transparent}
+@media(max-width:660px){ #luring,#gangguan{font-size:11.5px;padding:8px 12px} }
+
 #tirai{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:99;display:grid;place-items:center}
 #tirai div{background:var(--kertas);padding:18px 26px;border-radius:11px;font-weight:600;font-size:13px;
   display:flex;align-items:center;gap:11px;box-shadow:var(--bayang-2)}
@@ -370,7 +385,12 @@ tbody tr:hover td{background:#fbfdfe}
 <body>
 
 <div id="tirai" class="sembunyi"><div><span class="putar"></span><span id="tiraiTeks">Memuat...</span></div></div>
-<div id="luring" class="sembunyi">Tidak ada internet \u2014 kiriman data akan gagal sampai sinyal kembali</div>
+<div id="luring" class="sembunyi">Tidak ada internet. Halaman tetap terbuka, tetapi data stok baru bisa dibaca dan dikirim setelah tersambung lagi.</div>
+<div id="gangguan" class="sembunyi">
+  <span id="gangguanTeks"></span>
+  <button onclick="cobaLagi()">Coba lagi</button>
+  <button class="tutup" onclick="sembunyikanGangguan()">Tutup</button>
+</div>
 
 <!-- ============ MASUK ============ -->
 <section id="layarMasuk">
@@ -486,7 +506,7 @@ tbody tr:hover td{background:#fbfdfe}
 /* ================= KEADAAN ================= */
 /* Harus sama persis dengan VERSI_SISTEM di Code.gs. Kalau berbeda,
    aplikasi memberi tahu bahwa skrip server belum di-deploy ulang. */
-var VERSI_HALAMAN = '2026-09-14d';
+var VERSI_HALAMAN = '2026-09-14e';
 
 var U = null, F = {}, LANGKAH = [], iLangkah = 0;
 var dataManajer = null, tabAktif = 'stok', halKini = 'beranda';
@@ -546,25 +566,90 @@ function pesan(wadah, teks, jenis){
 function kosong(teks){
   return '<div class="kosong">'+ikon('kosong',34)+teks+'</div>';
 }
-function panggil(fungsi, args, lanjut, teksSibuk){
-  sibuk(true, teksSibuk);
+/* Fungsi yang HANYA MEMBACA data, jadi aman diulang sendiri oleh aplikasi
+   bila sambungan tersendat. Fungsi yang MENULIS (svrSimpan, svrBatal,
+   svrGantiPin, svrResetPin) sengaja TIDAK ada di sini - mengulanginya
+   berisiko membuat transaksi ganda. Untuk itu pengguna yang memutuskan. */
+var AMAN_DIULANG = {
+  svrAwal:1, svrSesi:1, svrMasuk:1, svrBarangUntuk:1, svrStokSaya:1, svrRiwayat:1,
+  svrIsiTransaksi:1, svrKartuStok:1, svrManajer:1, svrRekapPengawas:1,
+  svrDaftarPengawas:1, svrDaftarBarangSemua:1
+};
+var JEDA_ULANG = [1200, 3000, 6000];   /* jeda sebelum percobaan ke-2, 3, dan 4 */
+
+function galatJaringan(pesan){
+  return /failed to fetch|networkerror|network request failed|load failed|menjawab kode|timed out|timeout/i.test(pesan);
+}
+
+function panggil(fungsi, args, lanjut, teksSibuk, percobaan){
+  percobaan = percobaan || 1;
+  sibuk(true, (teksSibuk || 'Memuat...') +
+              (percobaan > 1 ? '  (percobaan ke-' + percobaan + ')' : ''));
   google.script.run
-    .withSuccessHandler(function(r){ sibuk(false); lanjut(r); })
-    .withFailureHandler(function(e){
+    .withSuccessHandler(function(r){
       sibuk(false);
+      sembunyikanGangguan();
+      lanjut(r);
+    })
+    .withFailureHandler(function(e){
       var pesan = (e && e.message) ? e.message : String(e);
-      if(/sesi sudah berakhir/i.test(pesan)){ sesiHabis(); return; }
-      var jaringan = /failed to fetch|networkerror|load failed|menjawab kode|timed out/i.test(pesan);
-      if(jaringan || navigator.onLine === false){
-        alert('Tidak bisa terhubung ke server.\n\n' +
-              (navigator.onLine === false
-                 ? 'Perangkat ini sedang tidak tersambung internet.'
-                 : pesan) +
-              '\n\nData tetap aman. Coba lagi setelah sinyal kembali.');
-      } else {
-        alert(pesan);
+      if(/sesi sudah berakhir/i.test(pesan)){ sibuk(false); sesiHabis(); return; }
+
+      /* Sambungan tersendat: coba lagi sendiri beberapa kali sebelum
+         mengganggu pengguna. Kebanyakan gangguan seperti ini sesaat saja. */
+      if(galatJaringan(pesan) && AMAN_DIULANG[fungsi] && percobaan <= JEDA_ULANG.length){
+        setTimeout(function(){
+          panggil(fungsi, args, lanjut, teksSibuk, percobaan + 1);
+        }, JEDA_ULANG[percobaan - 1]);
+        return;
       }
+
+      sibuk(false);
+      if(galatJaringan(pesan) || navigator.onLine === false) tampilGangguan(pesan, fungsi);
+      else alert(pesan);
     })[fungsi].apply(null, args);
+}
+
+/* ================= BILAH GANGGUAN SAMBUNGAN =================
+   Menggantikan kotak peringatan yang menghalangi layar. Kotak itu harus
+   ditutup satu per satu dan membuat aplikasi terasa mati, padahal yang
+   dibutuhkan hanya satu tombol: coba lagi. */
+function tampilGangguan(pesan, fungsi){
+  var b = el('gangguan'), t = el('gangguanTeks');
+  if(!b || !t) return;
+  t.innerHTML = navigator.onLine === false
+    ? 'Perangkat ini sedang tidak tersambung internet, jadi data stok belum bisa dimuat.'
+    : 'Server belum menjawab setelah ' + (JEDA_ULANG.length + 1) + ' kali dicoba. ' +
+      'Data yang sudah tersimpan tetap aman.' +
+      (fungsi === 'svrSimpan' ? ' <b>Periksa Riwayat dulu</b> sebelum mengirim ulang, ' +
+        'supaya tidak tercatat dua kali.' : '');
+  b.classList.remove('sembunyi');
+  aturTinggiBilah();
+}
+function sembunyikanGangguan(){
+  var b = el('gangguan'); if(b) b.classList.add('sembunyi');
+  aturTinggiBilah();
+}
+
+/* Bilah pemberitahuan menempel di puncak layar, jadi seluruh isi aplikasi
+   digeser turun persis setinggi bilah yang sedang tampil - kalau tidak,
+   ia menutupi kepala halaman beserta tombol Segarkan. Tingginya diukur,
+   bukan ditebak, karena di HP tulisannya bisa turun ke dua baris. */
+function aturTinggiBilah(){
+  var t = 0;
+  ['luring','gangguan'].forEach(function(id){
+    var b = el(id);
+    if(b && !b.classList.contains('sembunyi')) t += b.offsetHeight;
+  });
+  document.documentElement.style.setProperty('--bilah', t + 'px');
+  var g = el('gangguan'), l = el('luring');
+  if(g && l && !l.classList.contains('sembunyi')) g.style.top = l.offsetHeight + 'px';
+  else if(g) g.style.top = '0px';
+}
+window.addEventListener('resize', aturTinggiBilah);
+function cobaLagi(){
+  sembunyikanGangguan();
+  if(U) segarkan(); else location.reload();
 }
 
 /* ================= LOGO =================
@@ -740,6 +825,11 @@ function inisial(nama){
 function periksaSambungan(){
   var b = el('luring');
   if(b) b.classList.toggle('sembunyi', navigator.onLine !== false);
+  aturTinggiBilah();
+  /* Begitu internet kembali, halaman yang sedang dibuka dimuat ulang
+     sendiri supaya penggunanya tidak perlu menekan apa pun. */
+  if(navigator.onLine !== false && U && el('gangguan') &&
+     !el('gangguan').classList.contains('sembunyi')) cobaLagi();
 }
 window.addEventListener('online', periksaSambungan);
 window.addEventListener('offline', periksaSambungan);
@@ -747,6 +837,10 @@ periksaSambungan();
 
 /* ================= NAVIGASI ================= */
 function daftarHalaman(){
+  /* Selama PIN masih PIN bawaan, satu-satunya halaman yang boleh dibuka
+     adalah Ganti PIN. Server juga menolak fungsi lain, jadi ini bukan
+     sekadar penyembunyian tampilan. */
+  if(U && U.wajibGantiPin) return ['pin'];
   var d = ['beranda','input','stok','riwayat'];
   if(U.peran==='MANAJER' || U.peran==='ADMIN') d.splice(1,0,'manajer');
   if(U.peran==='MANAJER') d = d.filter(function(x){ return x!=='input'; });
@@ -847,7 +941,8 @@ function masukAplikasi(r, halaman){
   el('apl').classList.remove('sembunyi');
   gambarNavigasi();
   var d = daftarHalaman();
-  buka(d.indexOf(halaman) >= 0 ? halaman : 'beranda');
+  if(r.wajibGantiPin) buka('pin');
+  else buka(d.indexOf(halaman) >= 0 ? halaman : 'beranda');
   simpanSesiLokal(r);
 }
 
@@ -865,15 +960,14 @@ function keluar(){
 function pulihkanSesi(){
   var s = ambilSesiLokal();
   if(!s) return;
-  sibuk(true, 'Memulihkan sesi...');
-  google.script.run
-    .withSuccessHandler(function(r){
-      sibuk(false);
-      if(r && r.ok) masukAplikasi(r, s.halaman || 'beranda');
-      else hapusSesiLokal();
-    })
-    .withFailureHandler(function(){ sibuk(false); hapusSesiLokal(); })
-    .svrSesi(s.token);
+  panggil('svrSesi', [s.token], function(r){
+    if(r && r.ok) masukAplikasi(r, s.halaman || 'beranda');
+    else hapusSesiLokal();   /* server menolak token: memang harus masuk lagi */
+  }, 'Memulihkan sesi...');
+  /* Kalau yang gagal adalah sambungannya, sesi tersimpan TIDAK dihapus -
+     kalau dihapus, satu gangguan sinyal sesaat memaksa pengawas mengetik
+     PIN lagi padahal sesinya di server masih sah. panggil() sudah
+     mencoba ulang sendiri lalu menampilkan bilah gangguan. */
 }
 /* Ditunda sampai seluruh berkas selesai dibaca, karena fungsi halaman
    dan penghubung ke server baru tersedia di blok-blok berikutnya. */
@@ -978,6 +1072,10 @@ function lencanaJenis(j){
 function muatPin(){
   el('halPin').innerHTML =
     '<div class="kartu" style="max-width:460px"><h3>Ganti PIN</h3><div class="isi">' +
+    (U.wajibGantiPin
+      ? '<div class="pesan p-kuning">PIN Anda masih PIN bawaan dari admin, dan alamat aplikasi ini ' +
+        'bisa dibuka siapa saja. Ganti PIN dulu - menu yang lain terkunci sampai PIN diganti.</div>'
+      : '') +
     '<div id="pesanPin"></div>' +
     '<div class="kel"><label>PIN LAMA</label><input id="pinLama" type="password" inputmode="numeric"></div>' +
     '<div class="kel"><label>PIN BARU</label><input id="pinBaru" type="password" inputmode="numeric"></div>' +
@@ -989,7 +1087,15 @@ function gantiPin(){
   if(el('pinBaru').value !== el('pinBaru2').value){ pesan('pesanPin','Ulangi PIN baru belum sama.'); return; }
   panggil('svrGantiPin',[U.token, el('pinLama').value.trim(), el('pinBaru').value.trim()], function(r){
     pesan('pesanPin', aman(r.pesan), r.ok?'hijau':'merah');
-    if(r.ok) ['pinLama','pinBaru','pinBaru2'].forEach(function(i){ el(i).value=''; });
+    if(!r.ok) return;
+    ['pinLama','pinBaru','pinBaru2'].forEach(function(i){ el(i).value=''; });
+    /* Kunci dibuka: menu lain langsung bisa dipakai tanpa masuk ulang. */
+    if(U.wajibGantiPin){
+      U.wajibGantiPin = false;
+      gambarNavigasi();
+      alert('PIN berhasil diganti. Menu yang lain sekarang sudah terbuka.');
+      buka('beranda');
+    }
   }, 'Menyimpan PIN...');
 }
 </script>
