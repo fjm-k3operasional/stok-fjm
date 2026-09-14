@@ -49,8 +49,12 @@ a:hover{text-decoration:underline}
   border-radius:50%;background:rgba(255,255,255,.05)}
 .masuk-kiri::before{content:"";position:absolute;right:40px;top:-120px;width:280px;height:280px;
   border-radius:50%;background:rgba(255,255,255,.04)}
-.masuk-merek{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
-.masuk-merek img{height:42px;max-width:200px;object-fit:contain}
+.masuk-merek{display:flex;align-items:center;gap:12px;position:relative;z-index:1;
+  max-width:100%;overflow:hidden}
+.masuk-merek img{height:46px;max-width:320px;object-fit:contain;object-position:left center}
+.masuk-merek .tulisan{min-width:0;overflow:hidden}
+.masuk-merek .tulisan b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.masuk-merek .tulisan span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Penyesuaian logo terhadap latar gelap.
    logo-putih  : logo gelap dijadikan siluet putih polos supaya terbaca
    logo-alas   : logo diberi alas putih (cara paling aman bila warna
@@ -84,13 +88,21 @@ a:hover{text-decoration:underline}
 /* ---- sisi kiri ---- */
 .sisi{background:var(--tinta);color:#cbd5e1;display:flex;flex-direction:column;
   position:fixed;inset:0 auto 0 0;width:var(--sisi);z-index:30}
-.sisi-merek{display:flex;align-items:center;gap:11px;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
-.sisi-merek img{height:34px;max-width:132px;object-fit:contain}
+.sisi-merek{display:flex;align-items:center;gap:11px;padding:16px 18px;overflow:hidden;
+  border-bottom:1px solid rgba(255,255,255,.07)}
+/* Logo dibiarkan memakai lebar penuh kepala menu. Tulisan STOK OPERASIONAL
+   di sebelahnya disembunyikan begitu logo sungguhan tampil (lihat
+   pasangLogo), karena logo perusahaan sudah memuat namanya sendiri -
+   kalau keduanya dipaksa berdampingan, tulisannya meluber keluar menu. */
+.sisi-merek img{height:34px;max-width:100%;object-fit:contain;object-position:left center}
 .sisi-merek .kotak{width:34px;height:34px;border-radius:8px;flex:none;
   background:linear-gradient(135deg,#14b8a6,#0f766e);display:grid;place-items:center;
   color:#fff;font-weight:800;font-size:12px;letter-spacing:.4px}
-.sisi-merek b{display:block;color:#fff;font-size:12.5px;letter-spacing:.4px;line-height:1.25}
-.sisi-merek span{display:block;font-size:10.5px;color:#64748b}
+.sisi-merek .tulisan{min-width:0;overflow:hidden}
+.sisi-merek b{display:block;color:#fff;font-size:12.5px;letter-spacing:.4px;line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sisi-merek span{display:block;font-size:10.5px;color:#64748b;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sisi nav{flex:1;padding:12px 10px;overflow:auto}
 .sisi .kel-nav{font-size:10px;letter-spacing:.8px;color:#475569;text-transform:uppercase;
   padding:12px 10px 6px;font-weight:700}
@@ -366,9 +378,9 @@ tbody tr:hover td{background:#fbfdfe}
     <div class="masuk-merek">
       <img id="logoMasuk" class="sembunyi" alt="">
       <div class="kotak" id="kotakMasuk">FJM</div>
-      <div>
-        <div style="font-weight:700;font-size:13px;letter-spacing:.4px">PT FOKUS JASA MITRA</div>
-        <div style="font-size:11px;color:#94a3b8">Bagian Operasional</div>
+      <div class="tulisan" id="tulisanMasuk">
+        <b style="font-weight:700;font-size:13px;letter-spacing:.4px">PT FOKUS JASA MITRA</b>
+        <span style="font-size:11px;color:#94a3b8">Bagian Operasional</span>
       </div>
     </div>
     <div>
@@ -386,6 +398,7 @@ tbody tr:hover td{background:#fbfdfe}
     <div class="masuk-kotak">
       <h2>Masuk</h2>
       <p class="sub">Silakan masukkan nomor badge dan PIN Anda.</p>
+      <div id="pesanVersi"></div>
       <div id="pesanMasuk"></div>
       <div class="kel">
         <label>NOMOR BADGE</label>
@@ -417,7 +430,7 @@ tbody tr:hover td{background:#fbfdfe}
     <div class="sisi-merek">
       <img id="logoSisi" class="sembunyi" alt="">
       <div class="kotak" id="kotakSisi">FJM</div>
-      <div style="min-width:0">
+      <div class="tulisan" id="tulisanSisi">
         <b>STOK OPERASIONAL</b>
         <span>PT Fokus Jasa Mitra</span>
       </div>
@@ -471,6 +484,10 @@ tbody tr:hover td{background:#fbfdfe}
 
 <script>
 /* ================= KEADAAN ================= */
+/* Harus sama persis dengan VERSI_SISTEM di Code.gs. Kalau berbeda,
+   aplikasi memberi tahu bahwa skrip server belum di-deploy ulang. */
+var VERSI_HALAMAN = '2026-09-14d';
+
 var U = null, F = {}, LANGKAH = [], iLangkah = 0;
 var dataManajer = null, tabAktif = 'stok', halKini = 'beranda';
 
@@ -556,24 +573,44 @@ function panggil(fungsi, args, lanjut, teksSibuk){
    gelap, ia akan tenggelam di latar itu - maka warnanya disesuaikan
    sesuai pilihan di sheet PENGATURAN. */
 var logoTerpasang = '';
+var KUNCI_LOGO = 'logoStokFJM';
 
 function pasangLogo(url, gaya){
   if(!url || url === logoTerpasang) return;
   var uji = new Image();
   uji.onload = function(){
     logoTerpasang = url;
+    ingatLogo(url, gaya);
     ['Masuk','Sisi'].forEach(function(t){
-      var g = el('logo'+t), k = el('kotak'+t);
+      var g = el('logo'+t), k = el('kotak'+t), s = el('tulisan'+t);
       if(!g) return;
       g.src = url; g.alt = 'Logo perusahaan';
       g.classList.remove('sembunyi');
       if(k) k.classList.add('sembunyi');
+      /* Logo perusahaan sudah memuat nama perusahaan. Menampilkan tulisan
+         lagi di sebelahnya membuat isinya meluber keluar menu samping,
+         jadi tulisannya disembunyikan begitu logo berhasil tampil. */
+      if(s) s.classList.add('sembunyi');
     });
     terapkanGayaLogo(url, (gaya || 'OTOMATIS').toUpperCase());
   };
-  /* Gambar gagal dimuat: kotak FJM dibiarkan, jangan tampilkan ikon rusak. */
-  uji.onerror = function(){ logoTerpasang = ''; };
+  /* Gambar gagal dimuat: kotak FJM dan tulisannya dibiarkan apa adanya,
+     jangan sampai yang tampil justru ikon gambar rusak. */
+  uji.onerror = function(){ logoTerpasang = ''; lupakanLogo(); };
   uji.src = url;
+}
+
+/* Logo diingat di perangkat supaya sudah tampil di layar masuk pada
+   pembukaan berikutnya - tanpa menunggu jawaban server, dan tetap tampil
+   walau sinyal sedang hilang. */
+function ingatLogo(url, gaya){
+  try { localStorage.setItem(KUNCI_LOGO, JSON.stringify({ url: url, gaya: gaya || 'OTOMATIS' })); }
+  catch(e){}
+}
+function lupakanLogo(){ try { localStorage.removeItem(KUNCI_LOGO); } catch(e){} }
+function logoDiingat(){
+  try { return JSON.parse(localStorage.getItem(KUNCI_LOGO) || 'null'); }
+  catch(e){ return null; }
 }
 
 function terapkanGayaLogo(url, gaya){
@@ -622,13 +659,45 @@ function ukurTerangLogo(url, selesai){
   im.src = url;
 }
 
-/* Logo harus sudah tampil SEBELUM siapa pun mengetik badge, jadi diambil
-   sendiri saat halaman dibuka - tidak menunggu proses masuk. */
+/* Logo harus sudah tampil SEBELUM siapa pun mengetik badge. Karena itu
+   logo yang diingat dipasang lebih dulu tanpa menunggu apa pun, lalu
+   server ditanya untuk menyegarkannya kalau sempat. */
 function muatLogoAwal(){
+  var ingat = logoDiingat();
+  if(ingat && ingat.url) pasangLogo(ingat.url, ingat.gaya);
+
   google.script.run
-    .withSuccessHandler(function(r){ if(r && r.ok && r.logo) pasangLogo(r.logo, r.gayaLogo); })
-    .withFailureHandler(function(){})
+    .withSuccessHandler(function(r){
+      if(r && r.ok){
+        if(r.logo) pasangLogo(r.logo, r.gayaLogo);
+        else { lupakanLogo(); }
+      }
+      periksaVersi(r && r.versi);
+    })
+    .withFailureHandler(function(e){
+      /* Kalau server menolak karena tidak mengenal svrAwal, artinya skrip
+         di Apps Script belum di-deploy ulang. Itu perlu dikatakan, bukan
+         didiamkan - kalau tidak, gejalanya muncul di tempat lain. */
+      var pesan = (e && e.message) ? e.message : String(e);
+      if(/tidak dikenal|is not a function|svrAwal/i.test(pesan)) periksaVersi('(lama)');
+    })
     .svrAwal();
+}
+
+/* ================= PERIKSA VERSI =================
+   Halaman aplikasi dan skrip server adalah dua berkas terpisah yang
+   diperbarui sendiri-sendiri. Kalau salah satu tertinggal, gejalanya
+   membingungkan (fitur baru diam saja tanpa pesan apa pun). Blok ini
+   membuat keadaan itu terlihat jelas. */
+function periksaVersi(versiServer){
+  var w = el('pesanVersi');
+  if(!w) return;
+  if(!versiServer || versiServer === VERSI_HALAMAN){ w.innerHTML = ''; return; }
+  w.innerHTML = '<div class="pesan p-kuning">Skrip di server belum versi terbaru ' +
+    '(server ' + aman(versiServer) + ', halaman ' + aman(VERSI_HALAMAN) + ').<br>' +
+    'Di Apps Script: tempel Code.gs terbaru, lalu <b>Deploy &rarr; Manage deployments ' +
+    '&rarr; ikon pensil &rarr; Version: New version &rarr; Deploy</b>. ' +
+    'Sebagian tampilan bisa belum benar sampai itu dilakukan.</div>';
 }
 
 /* ================= SESI TERSIMPAN =================
@@ -767,6 +836,7 @@ function masuk(){
    maupun oleh pemulihan sesi setelah halaman dimuat ulang. */
 function masukAplikasi(r, halaman){
   U = r;
+  periksaVersi(r.versi || '(lama)');
   pasangLogo(r.logo, r.gayaLogo);
   el('hNama').textContent = r.nama;
   el('hPeran').textContent = r.peran + ' \u00b7 ' +
@@ -856,11 +926,22 @@ function muatBeranda(){
         return '<div class="ubin '+x[0]+'"><span class="lambang">'+ikon(x[1])+
           '</span><div><b>'+x[2]+'</b><span>'+x[3]+'</span></div></div>'; }).join('');
 
+      /* Transaksi yang sudah dibatalkan admin TIDAK ikut ditampilkan di
+         Ringkasan. Tabel ini tidak punya kolom status, jadi kalau ikut
+         tampil ia terbaca seolah masih sah - padahal stoknya sudah
+         dikembalikan. Riwayat dan Halaman Manajer tetap menampilkannya
+         lengkap dengan status dan alasan, sebagai jejak audit. */
+      var trxSah = trx.filter(function(x){ return x.status !== 'DIBATALKAN'; });
+      var jmlBatal = trx.length - trxSah.length;
+
       el('tautRiwayat').innerHTML = trx.length
         ? '<a href="#" onclick="buka(\'riwayat\');return false;">Lihat semua</a>' : '';
-      el('isiTrxBeranda').innerHTML = trx.length
-        ? tabelRingkas(trx.slice(0,12))
-        : kosong('Belum ada transaksi.');
+      el('isiTrxBeranda').innerHTML = (trxSah.length
+        ? tabelRingkas(trxSah.slice(0,12))
+        : kosong(trx.length ? 'Semua transaksi terakhir sudah dibatalkan.'
+                            : 'Belum ada transaksi.')) +
+        (jmlBatal ? '<p class="catatan" style="padding:0 16px 14px">' + ang(jmlBatal) +
+          ' transaksi dibatalkan tidak ditampilkan di sini. Lihat di Riwayat.</p>' : '');
 
       var teratas = stok.slice().sort(function(a,b){ return b.nilai-a.nilai; }).slice(0,6);
       el('tautStok').innerHTML = stok.length
@@ -1258,7 +1339,7 @@ function muatRiwayat(){
     if(!r.ok){ el('halRiwayat').innerHTML = kosong(aman(r.pesan)); return; }
     el('halRiwayat').innerHTML = '<div class="kartu"><h3>Riwayat Transaksi' +
       '<span class="kanan-kecil">'+ang(r.transaksi.length)+' transaksi terakhir</span></h3>' +
-      (r.transaksi.length ? tabelTransaksi(r.transaksi, false, U.peran!=='PENGAWAS')
+      (r.transaksi.length ? tabelTransaksi(r.transaksi, U.peran==='ADMIN', U.peran!=='PENGAWAS')
                           : '<div class="isi">'+kosong('Belum ada transaksi.')+'</div>') + '</div>';
   }, 'Mengambil riwayat...');
 }
@@ -1539,7 +1620,9 @@ function batalkan(id){
   if(!alasan.trim()){ alert('Alasan wajib diisi.'); return; }
   panggil('svrBatal',[U.token, id, alasan.trim()], function(r){
     alert(r.pesan);
-    if(r.ok) muatManajer(dataManajer.filter||{});
+    /* Pembatalan bisa dijalankan dari Halaman Manajer maupun dari Riwayat,
+       jadi yang dimuat ulang adalah halaman yang sedang dibuka. */
+    if(r.ok) segarkan();
   }, 'Membatalkan transaksi...');
 }
 </script>
