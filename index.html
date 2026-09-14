@@ -3,12 +3,21 @@
 <head>
 <meta charset="utf-8">
 <title>Stok Operasional FJM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stok FJM">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
 <!-- ============================================================
      ALAMAT APLIKASI  -  ganti baris di bawah dengan alamat Web App
      Apps Script Anda (yang berakhiran /exec), lalu simpan.
      ============================================================ -->
 <script>
-var ALAMAT_API = 'https://script.google.com/macros/s/AKfycbzDBdb5aWvssOtyN4TNHCEhHBjImV2gf43dP7QgJE0dNcyF4--_LabBof0AMSWUc8plBg/exec';
+var ALAMAT_API = 'TEMPEL_ALAMAT_WEB_APP_DI_SINI';
 </script>
 
 <style>
@@ -371,6 +380,16 @@ tbody tr:hover td{background:#fbfdfe}
       </div>
       <button class="tbl tbl-utama tbl-lebar" onclick="masuk()">MASUK</button>
       <p class="catatan" style="margin-top:16px">Lupa PIN? Hubungi admin operasional untuk diatur ulang.</p>
+      <div id="kotakPasang" class="sembunyi" style="margin-top:18px;border-top:1px solid var(--garis);padding-top:16px">
+        <button class="tbl tbl-diam tbl-lebar" onclick="pasangAplikasi()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+               <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Pasang di layar utama
+        </button>
+        <p class="catatan" id="petunjukPasang" style="text-align:center"></p>
+      </div>
+
     </div>
   </div>
 </section>
@@ -1378,6 +1397,65 @@ function batalkan(id){
     withSuccessHandler: function(f){ return rantai().withSuccessHandler(f); },
     withFailureHandler: function(f){ return rantai().withFailureHandler(f); }
   } } };
+})();
+</script>
+
+<script>
+/* ============================================================
+   Pemasangan ke layar utama (PWA)
+   ============================================================ */
+(function(){
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
+  }
+
+  var tawaran = null;
+  var berdiriSendiri = window.matchMedia('(display-mode: standalone)').matches ||
+                       window.navigator.standalone === true;
+  var iOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  function tampilkan(teks){
+    var k = document.getElementById('kotakPasang');
+    if (!k) return;
+    k.classList.remove('sembunyi');
+    document.getElementById('petunjukPasang').textContent = teks || '';
+  }
+
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    tawaran = e;
+    if (!berdiriSendiri) tampilkan('Aplikasi akan muncul di layar utama seperti aplikasi biasa.');
+  });
+
+  window.pasangAplikasi = function(){
+    if (tawaran) {
+      tawaran.prompt();
+      tawaran.userChoice.then(function(){
+        tawaran = null;
+        document.getElementById('kotakPasang').classList.add('sembunyi');
+      });
+      return;
+    }
+    alert('Di HP ini pemasangan dilakukan lewat menu browser:\n\n' +
+          (iOS ? '1. Ketuk tombol Bagikan (kotak dengan panah ke atas)\n' +
+                 '2. Gulir lalu pilih "Add to Home Screen" / "Tambahkan ke Layar Utama"\n' +
+                 '3. Ketuk "Add" / "Tambah"'
+               : '1. Ketuk titik tiga di pojok kanan atas Chrome\n' +
+                 '2. Pilih "Add to Home screen" / "Tambahkan ke layar utama"\n' +
+                 '3. Ketuk "Install" / "Pasang"'));
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    if (berdiriSendiri) return;
+    if (iOS) tampilkan('Ketuk tombol Bagikan di Safari, lalu pilih Tambahkan ke Layar Utama.');
+  });
+
+  window.addEventListener('appinstalled', function(){
+    var k = document.getElementById('kotakPasang');
+    if (k) k.classList.add('sembunyi');
+  });
 })();
 </script>
 </body>
